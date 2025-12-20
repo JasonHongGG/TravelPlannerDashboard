@@ -1,0 +1,204 @@
+import { GoogleGenAI } from "@google/genai";
+import { TripInput, TripData } from "../types";
+
+const SYSTEM_INSTRUCTION = `
+【系統角色】
+你是一名世界級的專業旅遊行程設計師、資深在地導遊與產品文件撰寫者。你的任務是依使用者需求產生**「內容豐富、邏輯嚴密且令人興奮的互動式旅遊行程」**。
+
+【你的核心原則】
+1.  **拒絕無聊**：不要只列出地名。請提供「為什麼要去這裡？」的理由、必吃美食、最佳拍攝點或隱藏玩法。讓行程看起來好玩且令人期待。
+2.  **邏輯與可行性**：時間安排必須真實可行（考慮交通擁堵、排隊時間）。路線必須順暢，不要東奔西跑。
+3.  **結構化輸出**：必須嚴格遵守 JSON Schema，確保前端能完美渲染。
+4.  **地點節點化 (重要 - Node Purity)**：
+    行程中的每一個 stop (節點) 必須屬於以下三大類之一，且必須是「具體地點名稱」：
+    *   **A. 景點 (Attractions)**：如 "雷門淺草寺"、"Shibuya Sky"、"上野公園"。
+    *   **B. 餐飲 (Dining)**：**早餐、午餐、晚餐必須設為獨立的 stop**。
+        *   ❌ 錯誤：Stop Name 寫 "午餐" 或 "在附近吃"。
+        *   ✅ 正確：Stop Name 寫 "一蘭拉麵 新宿中央東口店" 或 "築地虎杖 魚河岸千兩"。
+    *   **C. 交通樞紐 (Major Transport Hubs)**：如 "東京車站"、"成田機場"。僅在作為起點、終點或重大轉乘停留時使用。
+
+    *   **❌ 絕對禁止將「移動過程」設為節點**：
+        *   不可出現 "箱根 -> 新宿"、"搭乘新幹線"、"前往飯店" 這種標題。
+        *   交通方式與時間請填寫在 \`transport\` 欄位。
+
+【目標】
+依使用者輸入的需求與限制，產出一份**「可用於網站顯示的互動式行程規劃資料」**。
+行程需支援：日程切換、地點地圖點擊、站點間路線顯示。
+每一站點皆需提供：
+*   **具體描述**：不要只寫「參觀淺草寺」，要寫「穿著和服雷門拍照，品嚐仲見世通的人形燒與炸肉餅」。
+*   **量化資訊**：準確的停留時間、交通方式與預估費用。
+*   **互動連結**：Google Maps Search Link 與 Directions Link。
+
+【結構化輸出 JSON Schema】
+Format:
+{
+  "tripMeta": {
+    "dateRange": "YYYY-MM-DD to YYYY-MM-DD",
+    "days": 0,
+    "budgetEstimate": { "transport": 0, "dining": 0, "tickets": 0, "other": 0, "total": 0 },
+    "transportStrategy": "e.g., JR Pass + Subway",
+    "pace": "e.g., Moderate with early starts"
+  },
+  "days": [
+    {
+      "day": 1,
+      "date": "MM/DD",
+      "theme": "e.g., Day 1: Arrival & Shinjuku Neon Lights",
+      "stops": [
+        {
+          "name": "Stop Name (Specific Place: Attraction, Restaurant, or Station)",
+          "lat": 0.0,
+          "lng": 0.0,
+          "startTime": "HH:MM",
+          "endTime": "HH:MM",
+          "openHours": "e.g., 09:00 - 17:00",
+          "transport": "e.g., 🚄 Shinkansen (2.5hr) or 🚶 Walk 10min",
+          "costEstimate": "e.g., ¥2000",
+          "placeLink": "https://www.google.com/maps/search/?api=1&query={EncodedName}",
+          "routeLinkToNext": "https://www.google.com/maps/dir/?api=1&origin={OriginName}&destination={DestName}&travelmode={mode}",
+          "notes": "Rich description here. Mention specific foods, photo spots, or tips.",
+          "alternatives": ["Alt Option 1", "Alt Option 2"]
+        }
+      ],
+      "dailyChecklist": ["Buy Suica Card", "Reserve Shibuya Sky at sunset"]
+    }
+  ],
+  "totals": {},
+  "risks": ["Rainy season warning", "Last train times"]
+}
+
+You must strictly follow this JSON structure. Do not wrap in markdown code blocks if possible, just return the JSON or wrap in \`\`\`json.
+`;
+
+const getClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API_KEY environment variable is missing.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+const parseJsonFromResponse = (text: string): TripData => {
+  // Find the first '{' and the last '}' to extract the JSON object
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+
+  if (start === -1 || end === -1) {
+    throw new Error("Invalid response format: No JSON object found.");
+  }
+
+  const jsonStr = text.substring(start, end + 1);
+  try {
+    const data = JSON.parse(jsonStr) as TripData;
+    // Basic validation to ensure critical fields exist
+    if (!data.tripMeta || !data.days) {
+      throw new Error("Response is missing required trip data fields (tripMeta or days).");
+    }
+    return data;
+  } catch (e) {
+    console.error("JSON Parse Error:", e);
+    throw new Error("Failed to parse itinerary data.");
+  }
+};
+
+// Retry helper function
+const callWithRetry = async <T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries > 0) {
+      console.warn(`API call failed, retrying in ${delay}ms... (${retries} attempts left)`, error);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return callWithRetry(fn, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
+
+export const generateTripItinerary = async (input: TripInput): Promise<TripData> => {
+  const ai = getClient();
+  
+  const prompt = `
+    Please design a **highly engaging, professional, and detailed** travel itinerary based on the following:
+    
+    - **Destination**: ${input.destination}
+    - **Date Range**: ${input.dateRange}
+    - **Travelers**: ${input.travelers}
+    - **Interests**: ${input.interests}
+    - **Budget**: ${input.budget}
+    - **Transport Preference**: ${input.transport}
+    - **Accommodation Base**: ${input.accommodation}
+    - **Pace**: ${input.pace}
+    - **Must Visit**: ${input.mustVisit}
+    - **Language**: ${input.language}
+    - **Constraints**: ${input.constraints}
+
+    **IMPORTANT REQUIREMENTS:**
+    1. **Strict Node Purity**: Every stop MUST be a specific place.
+       - **Attractions**: e.g., "Senso-ji".
+       - **Dining**: e.g., "Ichiran Ramen". **Breakfast, Lunch, and Dinner must be individual stops with specific restaurant names.**
+       - **Transport Hubs**: e.g., "Shinjuku Station" (Only for start/end points).
+       - **NEVER** create a stop named "Travel to..." or "A -> B".
+    2. **Be Specific**: Do not just say "Lunch". Say "Lunch at Tsukiji Outer Market - try the fresh Tamagoyaki".
+    3. **Be Logical**: Ensure travel times between stops are realistic. Group nearby attractions.
+    4. **Be Fun**: Include "Pro Tips" or "Hidden Gems" in the notes.
+    5. **Structure**: Create a day-by-day plan.
+    
+    Ensure the response is valid JSON matching the schema defined in the system instruction.
+  `;
+
+  try {
+    return await callWithRetry(async () => {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview', // Switched to Pro for complex reasoning and structure
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+        },
+      });
+      return parseJsonFromResponse(response.text || "{}");
+    });
+  } catch (error) {
+    console.error("Gemini Generation Error:", error);
+    throw error;
+  }
+};
+
+export const updateTripItinerary = async (currentData: TripData, userRequest: string): Promise<TripData> => {
+  const ai = getClient();
+
+  // Create a slimmer version of the current data for context to avoid huge payloads
+  // We keep the structure but maybe we can optimize if needed. 
+  // For now, we trust the Pro model to handle the context window.
+  const prompt = `
+    Current Itinerary JSON:
+    ${JSON.stringify(currentData)}
+
+    User Request for Modification:
+    "${userRequest}"
+
+    Please update the JSON structure to reflect the user's request while maintaining the integrity of the schedule (recalculate times, routes, and totals if necessary). 
+    **CRITICAL**: Maintain "Node Purity". Ensure all new or modified stop names are specific places (Attractions, Restaurants, Stations), not routes or travel descriptions.
+    Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
+    Keep the descriptions rich and engaging.
+    Return ONLY the updated JSON.
+  `;
+
+  try {
+    return await callWithRetry(async () => {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview', // Switched to Pro for complex reasoning and structure
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+        },
+      });
+      return parseJsonFromResponse(response.text || "{}");
+    });
+  } catch (error) {
+    console.error("Gemini Update Error:", error);
+    throw error;
+  }
+};
