@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trip, TripData, TripMeta, TripStop, TripDay } from '../types';
+import { Trip, TripData, TripMeta, TripStop, TripDay, Message } from '../types';
 import { MapPin, Clock, DollarSign, Navigation, ExternalLink, AlertTriangle, Calendar, Info, ArrowRight, Share2, Printer, CheckCircle2, Car, Train, Footprints, Utensils, ShoppingBag, Landmark, TreeDeciduous, Camera, Coffee, Ticket, List, RotateCcw, Crosshair, ChevronDown, ChevronUp, Map as MapIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
 import Assistant from './Assistant';
@@ -163,11 +163,19 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
     { name: 'Other', value: budgetEstimate.other || 0 },
   ].filter(d => d.value > 0);
 
-  const handleAiUpdate = async (request: string) => {
-    if (!trip.data) return;
+  const handleAiUpdate = async (history: Message[], onThought: (text: string) => void): Promise<string> => {
+    if (!trip.data) return "";
     try {
-      const updatedData = await updateTripItinerary(trip.data, request);
-      onUpdateTrip(trip.id, updatedData);
+      // Pass full history to the service
+      const result = await updateTripItinerary(trip.data, history, onThought);
+      
+      // If the AI returned updated data, apply it to the state
+      if (result.updatedData) {
+        onUpdateTrip(trip.id, result.updatedData);
+      }
+      
+      // Return the text response (confirmation or chat) back to the assistant UI
+      return result.responseText;
     } catch (e) {
       console.error("Failed to update trip via AI", e);
       throw e; 

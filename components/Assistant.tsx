@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Send, X, Bot, Sparkles } from 'lucide-react';
+import { MessageCircle, Send, X, Bot, Sparkles, Loader2 } from 'lucide-react';
 import { Message } from '../types';
 
 interface Props {
-  onUpdate: (prompt: string) => Promise<void>;
+  onUpdate: (history: Message[], onThought: (text: string) => void) => Promise<string | void>;
   isGenerating: boolean;
 }
 
@@ -14,13 +14,14 @@ export default function Assistant({ onUpdate, isGenerating }: Props) {
     { role: 'model', text: "Hi! I'm your AI Travel Assistant. Not happy with a specific day? Want to change the restaurant? Just tell me, and I'll update the itinerary instantly.", timestamp: Date.now() }
   ]);
   const [loading, setLoading] = useState(false);
+  const [thinkingText, setThinkingText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, thinkingText]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -28,30 +29,33 @@ export default function Assistant({ onUpdate, isGenerating }: Props) {
     const userText = input;
     setInput('');
     setLoading(true);
+    setThinkingText('');
     
-    // Add User Message
-    const newMessages = [...messages, { role: 'user', text: userText, timestamp: Date.now() } as Message];
-    setMessages(newMessages);
+    // Add User Message locally first
+    const newHistory = [...messages, { role: 'user', text: userText, timestamp: Date.now() } as Message];
+    setMessages(newHistory);
 
     try {
-      // Add thinking placeholder
-      setMessages(prev => [...prev, { role: 'model', text: 'Thinking and updating your itinerary...', timestamp: Date.now() }]);
-      
-      // Call Parent Handler (which calls Gemini)
-      await onUpdate(userText);
-
-      // Update success message
-      setMessages(prev => {
-        const sliced = prev.slice(0, -1); // remove thinking
-        return [...sliced, { role: 'model', text: "I've updated the itinerary based on your request! Check out the changes above.", timestamp: Date.now() }];
+      // Call Parent Handler with full history and thought callback
+      // The parent returns the AI's final text response (if it was a chat) OR void (if it updated the trip, we usually get a confirmation text)
+      const finalText = await onUpdate(newHistory, (text) => {
+        setThinkingText(text);
       });
+
+      if (finalText) {
+          setMessages(prev => [...prev, { role: 'model', text: finalText, timestamp: Date.now() }]);
+      } else {
+          // Fallback if no text returned but update happened (shouldn't happen with new logic, but safe)
+          setMessages(prev => [...prev, { role: 'model', text: "Itinerary updated!", timestamp: Date.now() }]);
+      }
+
     } catch (error) {
        setMessages(prev => {
-        const sliced = prev.slice(0, -1);
-        return [...sliced, { role: 'model', text: "Sorry, I encountered an error updating the plan. Please try again.", timestamp: Date.now() }];
+        return [...prev, { role: 'model', text: "Sorry, I encountered an error. Please try again.", timestamp: Date.now() }];
       });
     } finally {
       setLoading(false);
+      setThinkingText('');
     }
   };
 
@@ -87,7 +91,7 @@ export default function Assistant({ onUpdate, isGenerating }: Props) {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div 
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm whitespace-pre-wrap ${
                     msg.role === 'user' 
                       ? 'bg-brand-600 text-white rounded-br-none' 
                       : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
@@ -97,6 +101,28 @@ export default function Assistant({ onUpdate, isGenerating }: Props) {
                 </div>
               </div>
             ))}
+
+            {/* Thinking Bubble */}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="max-w-[90%] bg-gray-100 text-gray-700 border border-gray-200 rounded-2xl rounded-bl-none px-4 py-3 text-sm shadow-sm">
+                   {thinkingText ? (
+                      <div className="animate-in fade-in duration-300">
+                        <div className="flex items-center gap-2 mb-2 text-brand-600 font-bold text-xs uppercase tracking-wide">
+                           <Loader2 className="w-3 h-3 animate-spin" />
+                           Thinking Process...
+                        </div>
+                        <p className="whitespace-pre-wrap leading-relaxed">{thinkingText}</p>
+                      </div>
+                   ) : (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Analyzing your request...</span>
+                      </div>
+                   )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input */}

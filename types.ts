@@ -71,8 +71,10 @@ export interface Trip {
   generationTimeMs?: number;
 }
 
+export type MessageRole = 'user' | 'model';
+
 export interface Message {
-  role: 'user' | 'model';
+  role: MessageRole;
   text: string;
   timestamp: number;
 }

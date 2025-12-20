@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { TripInput, TripData } from "../types";
+import { TripInput, TripData, Message } from "../types";
 
 const SYSTEM_INSTRUCTION = `
 【系統角色】
@@ -84,6 +84,7 @@ const parseJsonFromResponse = (text: string): TripData => {
   const end = text.lastIndexOf('}');
 
   if (start === -1 || end === -1) {
+    // Fallback: Sometimes model puts text before/after. If we have a lot of text, try to find JSON.
     throw new Error("Invalid response format: No JSON object found.");
   }
 
@@ -150,7 +151,7 @@ export const generateTripItinerary = async (input: TripInput): Promise<TripData>
   try {
     return await callWithRetry(async () => {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview', // Switched to Pro for complex reasoning and structure
+        model: 'gemini-3-pro-preview', 
         contents: prompt,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
@@ -165,38 +166,110 @@ export const generateTripItinerary = async (input: TripInput): Promise<TripData>
   }
 };
 
-export const updateTripItinerary = async (currentData: TripData, userRequest: string): Promise<TripData> => {
+export interface UpdateResult {
+    responseText: string;
+    updatedData?: TripData;
+}
+
+export const updateTripItinerary = async (
+  currentData: TripData, 
+  history: Message[],
+  onThought?: (text: string) => void
+): Promise<UpdateResult> => {
   const ai = getClient();
 
-  // Create a slimmer version of the current data for context to avoid huge payloads
-  // We keep the structure but maybe we can optimize if needed. 
-  // For now, we trust the Pro model to handle the context window.
+  const historyText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
+  const lastUserMessage = history[history.length - 1]?.text || "";
+
   const prompt = `
     Current Itinerary JSON:
     ${JSON.stringify(currentData)}
 
-    User Request for Modification:
-    "${userRequest}"
+    Conversation History:
+    ${historyText}
 
-    Please update the JSON structure to reflect the user's request while maintaining the integrity of the schedule (recalculate times, routes, and totals if necessary). 
-    **CRITICAL**: Maintain "Node Purity". Ensure all new or modified stop names are specific places (Attractions, Restaurants, Stations), not routes or travel descriptions.
-    Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
-    Keep the descriptions rich and engaging.
-    Return ONLY the updated JSON.
+    Current User Request:
+    "${lastUserMessage}"
+
+    **INSTRUCTIONS:**
+    
+    **Scenario A: Discussion / Research Phase**
+    If the user is asking for suggestions, options (e.g., "Add a supper spot", "What is good to eat nearby?"), or the request is vague:
+    1.  **DO NOT** generate the JSON itinerary yet.
+    2.  Provide a helpful, conversational response listing specific options, pros/cons, or asking clarifying questions.
+    3.  End your response there.
+
+    **Scenario B: Decision / Action Phase**
+    If the user has made a selection (e.g., "Let's go with option A", "Add the ramen shop"), or gave a direct command (e.g., "Delete day 2"):
+    1.  First, write a brief confirmation of what you are doing.
+    2.  Then, output a special separator: "___UPDATE_JSON___".
+    3.  Finally, output the COMPLETE, valid updated JSON structure.
+
+    **CRITICAL FOR JSON UPDATE**: 
+    - Maintain "Node Purity" (Specific Place Names only).
+    - Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
+    - Recalculate times and routes logically.
   `;
 
   try {
-    return await callWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview', // Switched to Pro for complex reasoning and structure
-        contents: prompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          responseMimeType: 'application/json',
-        },
-      });
-      return parseJsonFromResponse(response.text || "{}");
+    const responseStream = await ai.models.generateContentStream({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+      },
     });
+
+    let fullText = "";
+    let isJsonMode = false;
+    let jsonBuffer = "";
+    const delimiter = "___UPDATE_JSON___";
+
+    for await (const chunk of responseStream) {
+      const text = chunk.text;
+      
+      if (!isJsonMode) {
+        fullText += text;
+        const delimiterIndex = fullText.indexOf(delimiter);
+        
+        if (delimiterIndex !== -1) {
+            // We found the delimiter. Everything before it is thought/text.
+            // Everything after is the start of JSON.
+            isJsonMode = true;
+            
+            const thoughtPart = fullText.substring(0, delimiterIndex);
+            if (onThought) onThought(thoughtPart);
+            
+            // Start buffering JSON from whatever came after the delimiter in this chunk
+            // (Note: usually the delimiter and json won't split weirdly in one chunk but we handle it generally)
+            // Actually, simplest is just to flag it.
+            jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
+        } else {
+            // Still in text mode, stream to UI
+            if (onThought) onThought(fullText);
+        }
+      } else {
+         // We are fully in JSON mode, just buffer it, don't stream to chat UI
+         jsonBuffer += text;
+      }
+    }
+
+    // Final Processing
+    if (isJsonMode) {
+        // Scenario B: Update
+        const updatedData = parseJsonFromResponse(jsonBuffer);
+        const finalText = fullText.split(delimiter)[0];
+        return {
+            responseText: finalText,
+            updatedData: updatedData
+        };
+    } else {
+        // Scenario A: Chat only
+        return {
+            responseText: fullText
+        };
+    }
+
   } catch (error) {
     console.error("Gemini Update Error:", error);
     throw error;
