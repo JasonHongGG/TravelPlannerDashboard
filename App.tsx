@@ -6,24 +6,22 @@ import TripDetail from './components/TripDetail';
 import { generateTripItinerary } from './services/geminiService';
 
 export default function App() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  // Initialize state directly from localStorage to avoid race conditions
+  const [trips, setTrips] = useState<Trip[]>(() => {
+    try {
+      const saved = localStorage.getItem('ai_travel_trips');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to parse saved trips", e);
+      return [];
+    }
+  });
+
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [view, setView] = useState<'dashboard' | 'detail'>('dashboard');
 
-  // Load from local storage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('ai_travel_trips');
-    if (saved) {
-      try {
-        setTrips(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse saved trips", e);
-      }
-    }
-  }, []);
-
-  // Save to local storage on change
+  // Save to local storage whenever trips change
   useEffect(() => {
     localStorage.setItem('ai_travel_trips', JSON.stringify(trips));
   }, [trips]);
@@ -70,6 +68,29 @@ export default function App() {
     ));
   };
 
+  const handleDeleteTrip = (tripId: string) => {
+    setTrips(prev => {
+      const newTrips = prev.filter(t => t.id !== tripId);
+      return newTrips;
+    });
+    if (selectedTripId === tripId) {
+      setSelectedTripId(null);
+      setView('dashboard');
+    }
+  };
+
+  const handleImportTrip = (tripData: Trip) => {
+    // Regenerate ID to avoid conflicts if importing the same trip twice
+    const newTrip = {
+      ...tripData,
+      id: crypto.randomUUID(),
+      title: tripData.title,
+      createdAt: Date.now()
+    };
+    setTrips(prev => [newTrip, ...prev]);
+    alert("行程匯入成功！");
+  };
+
   const selectedTrip = trips.find(t => t.id === selectedTripId);
 
   return (
@@ -79,6 +100,8 @@ export default function App() {
           trips={trips} 
           onNewTrip={() => setIsModalOpen(true)}
           onSelectTrip={handleSelectTrip}
+          onDeleteTrip={handleDeleteTrip}
+          onImportTrip={handleImportTrip}
         />
       )}
 
