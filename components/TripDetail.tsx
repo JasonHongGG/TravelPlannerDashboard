@@ -380,22 +380,26 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
             {activeTab === 'itinerary' && (
               <>
                 {/* Day Selector Bar (Horizontal Scroll) */}
-                <div className="bg-white border-b border-gray-200 py-3 px-4 flex gap-3 overflow-x-auto scrollbar-hide sticky top-[57px] z-30">
+                <div className="bg-white border-b border-gray-200 py-4 px-4 flex gap-3 overflow-x-auto scrollbar-hide sticky top-[57px] z-30">
                   {days.map((day) => {
                      const isSelected = selectedDay === day.day;
                      return (
                         <button
                           key={day.day}
                           onClick={() => setSelectedDay(day.day)}
-                          className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[70px] px-3 py-2 rounded-lg border transition-all duration-200 ${
+                          className={`flex-shrink-0 flex flex-col items-center justify-center w-[70px] py-2 rounded-lg border transition-all duration-200 ${
                             isSelected 
-                              ? 'bg-brand-600 border-brand-600 text-white shadow-md transform scale-105' 
-                              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                              ? 'bg-white border-brand-600 ring-1 ring-brand-600 shadow-sm' 
+                              : 'bg-white border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                           <span className={`text-xs font-bold uppercase ${isSelected ? 'text-brand-100' : 'text-gray-400'}`}>第 {day.day} 天</span>
-                           <span className={`text-lg font-bold leading-none ${isSelected ? 'text-white' : 'text-gray-800'}`}>{safeRender(day.date).toString().split('/')[1] || day.day}</span>
-                           <span className={`text-[10px] mt-1 ${isSelected ? 'text-brand-100' : 'text-gray-400'}`}>{safeRender(day.date)}</span>
+                           <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">DAY</span>
+                           <span className={`text-2xl font-bold my-0.5 ${isSelected ? 'text-brand-600' : 'text-gray-700'}`}>
+                             {day.day}
+                           </span>
+                           <span className="text-[10px] text-gray-400 font-medium">
+                             {safeRender(day.date)}
+                           </span>
                         </button>
                      );
                   })}
@@ -409,7 +413,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
                         <div className="mb-6 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                            <div className="flex items-center gap-3 mb-2">
                              <div className="bg-brand-100 text-brand-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide">
-                               第 {currentDayData.day} 天
+                               DAY {currentDayData.day}
                              </div>
                              <span className="text-gray-400 text-xs font-medium">{safeRender(currentDayData.date)}</span>
                            </div>
