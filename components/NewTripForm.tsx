@@ -232,7 +232,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                       onClick={() => setIsExplorerOpen(true)}
                       className="text-xs font-bold text-brand-600 bg-brand-50 hover:bg-brand-100 px-2 py-1 rounded-md flex items-center gap-1 transition-all border border-brand-100"
                     >
-                      <Sparkles className="w-3 h-3 fill-brand-600" /> ✨ AI 景點探索助手
+                      <Sparkles className="w-3 h-3 fill-brand-600" /> AI 景點探索助手
                     </button>
                   }
                 />

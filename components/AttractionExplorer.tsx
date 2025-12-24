@@ -16,6 +16,10 @@ type TabType = 'attraction' | 'food';
 
 export default function AttractionExplorer({ isOpen, onClose, initialLocation, initialInterests, onConfirm }: Props) {
   const [location, setLocation] = useState(initialLocation);
+  // Add a state to store the location actually used for the search/images
+  // This prevents images from reloading/flickering when the user types in the input field
+  const [lastSearchLocation, setLastSearchLocation] = useState(initialLocation);
+  
   const [activeTab, setActiveTab] = useState<TabType>('attraction');
   
   const [loading, setLoading] = useState(false);
@@ -54,6 +58,9 @@ export default function AttractionExplorer({ isOpen, onClose, initialLocation, i
     // FIX: If it is a new search, clear the current list immediately.
     // This forces the UI to render the full loading state instead of showing stale data.
     if (isNewSearch) {
+        // Freeze the location for image generation
+        setLastSearchLocation(location);
+        
         setResults(prev => ({
             ...prev,
             [targetTab]: []
@@ -63,10 +70,6 @@ export default function AttractionExplorer({ isOpen, onClose, initialLocation, i
     setLoading(true);
     
     // If loading more, exclude current names
-    // Note: If isNewSearch is true, we just cleared it above, but we also pass [] here logically.
-    // If isNewSearch is false (load more), we use the existing data from state (before setResults updates it? No, react state update is async but we need current val)
-    // Actually, inside the async function, 'results' is the value from render closure.
-    // For 'Load More', we need the existing list.
     const existingItems = isNewSearch ? [] : results[targetTab];
     const excludeNames = existingItems.map(i => i.name);
 
@@ -100,7 +103,7 @@ export default function AttractionExplorer({ isOpen, onClose, initialLocation, i
   };
 
   const openInGoogleMaps = (name: string) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + location)}`;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + lastSearchLocation)}`;
     window.open(url, '_blank');
   };
 
@@ -141,7 +144,7 @@ export default function AttractionExplorer({ isOpen, onClose, initialLocation, i
                 className="bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-brand-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-md shadow-brand-100"
               >
                 {loading && results[activeTab].length === 0 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                重新搜尋
+                搜尋
               </button>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400">
                 <X className="w-6 h-6" />
@@ -192,8 +195,8 @@ export default function AttractionExplorer({ isOpen, onClose, initialLocation, i
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {currentList.map((item, idx) => {
                   // Use Bing Image Proxy for high relevance based on search query
-                  // "c=7" asks for high quality cropping, "w=800" for decent resolution
-                  const query = `${item.name} ${location} ${activeTab === 'food' ? 'food' : 'view'}`;
+                  // Use lastSearchLocation instead of the live input 'location' to prevent flickering
+                  const query = `${item.name} ${lastSearchLocation} ${activeTab === 'food' ? 'food' : 'view'}`;
                   const realImageUrl = `https://tse2.mm.bing.net/th?q=${encodeURIComponent(query)}&w=800&h=600&c=7&rs=1&p=0`;
                   const fallbackUrl = `https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=800&q=80`;
 
