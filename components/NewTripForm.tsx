@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { TripInput } from '../types';
 import { X, Calendar, MapPin, Users, Heart, DollarSign, Train, Home, Clock, CheckSquare, Languages, AlertCircle, Download, Upload, Sparkles } from 'lucide-react';
@@ -123,24 +124,60 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
   };
 
   const handleExplorerConfirm = (must: string[], avoid: string[]) => {
-    // Strictly append new items to avoid modifying existing user text
-    let newText = formData.mustVisit || '';
+    const currentText = formData.mustVisit || '';
     
-    // Add Must Visit
-    if (must.length > 0) {
-        if (newText && !newText.endsWith('\n')) newText += '\n';
-        newText += `必去：${must.join('、')}`;
-    }
+    // Use Sets to automatically handle deduplication
+    const mustSet = new Set<string>();
+    const avoidSet = new Set<string>();
+    const otherLines: string[] = [];
 
-    // Add Avoid
-    if (avoid.length > 0) {
-        if (newText && !newText.endsWith('\n')) newText += '\n';
-        newText += `避開：${avoid.join('、')}`;
+    // 1. Parse existing text line by line
+    currentText.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        // Check for "Must Visit" keywords (Traditional Chinese, Simplified, English)
+        if (/^(必去|Must)/i.test(trimmed)) {
+            // Extract content after colon or space
+            const content = trimmed.replace(/^(必去|Must)\s*[:：]?\s*/i, '');
+            // Split by common delimiters (Chinese comma, regular comma)
+            content.split(/[、,，]+/).map(s => s.trim()).filter(Boolean).forEach(s => mustSet.add(s));
+        } 
+        // Check for "Avoid" keywords
+        else if (/^(避開|Avoid)/i.test(trimmed)) {
+            const content = trimmed.replace(/^(避開|Avoid)\s*[:：]?\s*/i, '');
+            content.split(/[、,，]+/).map(s => s.trim()).filter(Boolean).forEach(s => avoidSet.add(s));
+        } 
+        // Preserve other user notes that don't match the pattern
+        else {
+            otherLines.push(trimmed);
+        }
+    });
+
+    // 2. Add new items from Explorer
+    must.forEach(item => mustSet.add(item));
+    avoid.forEach(item => avoidSet.add(item));
+
+    // 3. Conflict Resolution: 
+    // If an item is added to "Must", ensure it's removed from "Avoid", and vice versa.
+    // We prioritize the NEW selection from Explorer.
+    must.forEach(item => avoidSet.delete(item));
+    avoid.forEach(item => mustSet.delete(item));
+
+    // 4. Reconstruct the text
+    const newLines = [...otherLines];
+    
+    if (mustSet.size > 0) {
+        newLines.push(`必去：${Array.from(mustSet).join('、')}`);
+    }
+    
+    if (avoidSet.size > 0) {
+        newLines.push(`避開：${Array.from(avoidSet).join('、')}`);
     }
 
     setFormData(prev => ({
       ...prev,
-      mustVisit: newText
+      mustVisit: newLines.join('\n')
     }));
   };
 
