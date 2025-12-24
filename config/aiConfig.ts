@@ -56,6 +56,7 @@ export const SYSTEM_INSTRUCTION = `
 每一站點皆需提供：
 *   **具體描述**：不要只寫「參觀淺草寺」，要寫「穿著和服雷門拍照，品嚐仲見世通的人形燒與炸肉餅」。
 *   **量化資訊**：準確的停留時間、交通方式與預估費用。
+*   **分類標籤**：準確標記該地點的類型（如美食、景點、自然）。
 *   **互動連結**：Google Maps Search Link 與 Directions Link。
 
 【結構化輸出 JSON Schema】
@@ -76,6 +77,7 @@ Format:
       "stops": [
         {
           "name": "Stop Name (Native Language e.g. Japanese)",
+          "type": "Must be exactly one of: 'attraction', 'landmark', 'nature', 'history', 'dining', 'cafe', 'shopping', 'transport', 'activity', 'accommodation', 'other'",
           "lat": 0.0,
           "lng": 0.0,
           "startTime": "HH:MM",
@@ -129,7 +131,7 @@ export const constructTripPrompt = (input: TripInput): string => {
     3. **Be Specific**: Do not just say "Lunch". Say "Lunch at [Restaurant Name] - try the fresh Tamagoyaki".
     4. **Be Logical**: Ensure travel times between stops are realistic. Group nearby attractions.
     5. **Be Fun**: Include "Pro Tips" or "Hidden Gems" in the notes.
-    6. **Structure**: Create a day-by-day plan.
+    6. **Categorization**: Ensure the 'type' field is accurate for each stop (e.g. 'nature' for parks, 'dining' for restaurants).
     
     Ensure the response is valid JSON matching the schema defined in the system instruction.
   `;
@@ -167,7 +169,7 @@ export const constructUpdatePrompt = (currentData: TripData, history: Message[])
     - **Language**: Place names MUST be in the local native language (e.g. Japanese). Descriptions MUST be in Traditional Chinese.
     - Maintain "Node Purity" (Specific Place Names only).
     - Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
-    - Recalculate times and routes logically.
+    - Ensure the 'type' field is correctly set for any new stops.
   `;
 };
 

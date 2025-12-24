@@ -2,7 +2,7 @@ import React from 'react';
 import { TripStop } from '../types';
 import { 
   Footprints, Car, Train, Navigation, 
-  Utensils, Coffee, ShoppingBag, TreeDeciduous, Landmark, Camera, Ticket, MapPin 
+  Utensils, Coffee, ShoppingBag, Mountain, Landmark, Camera, Ticket, MapPin, Bed, Flag
 } from 'lucide-react';
 
 // Helper icon for transport
@@ -16,6 +16,27 @@ export const TransportIcon = ({ text }: { text: string }) => {
 
 // Helper to deduce icon from stop details
 export const getStopIcon = (stop: TripStop) => {
+  // 1. Precise Type Matching (New Logic)
+  if (stop.type) {
+    switch (stop.type) {
+      case 'dining': return Utensils;
+      case 'cafe': return Coffee;
+      case 'nature': return Mountain;
+      case 'attraction': return MapPin; // Generic attraction
+      case 'landmark': return Landmark;
+      case 'history': return Landmark; // Temples, Museums
+      case 'shopping': return ShoppingBag;
+      case 'transport': return Train;
+      case 'activity': return Ticket; // Theme parks, experiences
+      case 'accommodation': return Bed;
+      case 'other': return Flag;
+      default:
+        // Fall through to text matching if type is unknown
+        break;
+    }
+  }
+
+  // 2. Heuristic Matching (Fallback for old data or missing type)
   const text = (stop.name + ' ' + (stop.notes || '')).toLowerCase();
   
   // Dining
@@ -45,13 +66,13 @@ export const getStopIcon = (stop: TripStop) => {
     text.includes('唐吉訶德') || text.includes('don quijote') || text.includes('超市')
   ) return ShoppingBag;
 
-  // Nature
+  // Nature (Mountain)
   if (
     text.includes('park') || text.includes('garden') || text.includes('nature') || text.includes('mountain') || 
     text.includes('hike') || text.includes('beach') ||
     text.includes('公園') || text.includes('花園') || text.includes('御苑') || text.includes('山') || 
     text.includes('川') || text.includes('湖') || text.includes('海') || text.includes('散步')
-  ) return TreeDeciduous;
+  ) return Mountain;
 
   // Landmark/Culture
   if (
@@ -80,8 +101,14 @@ export const getStopIcon = (stop: TripStop) => {
   if (
       text.includes('station') || text.includes('airport') || text.includes('terminal') ||
       text.includes('車站') || text.includes('駅') || text.includes('機場') || text.includes('空港') || text.includes('航廈') ||
-      text.includes('轉運站')
+      text.includes('轉運站') || text.includes('バスタ')
   ) return Train;
+
+  // Hotel/Accommodation
+  if (
+      text.includes('hotel') || text.includes('hostel') || text.includes('inn') ||
+      text.includes('飯店') || text.includes('酒店') || text.includes('旅館') || text.includes('住宿')
+  ) return Bed;
 
   return MapPin;
 };

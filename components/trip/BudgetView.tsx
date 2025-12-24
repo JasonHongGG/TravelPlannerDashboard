@@ -3,7 +3,7 @@ import { TripDay, TripStop, TripMeta } from '../../types';
 import { safeRender, parseCostToNumber } from '../../utils/formatters';
 import { getStopIcon } from '../../utils/icons';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ChartTooltip } from 'recharts';
-import { Utensils, Coffee, Ticket, Landmark, TreeDeciduous, Camera, Train, Car, Navigation, ShoppingBag, MapPin, List, XCircle, Clock, Wallet, TrendingUp } from 'lucide-react';
+import { Utensils, Coffee, Ticket, Landmark, Mountain, Camera, Train, Car, Navigation, ShoppingBag, MapPin, List, XCircle, Clock, Wallet, TrendingUp } from 'lucide-react';
 
 interface Props {
   tripMeta: TripMeta;
@@ -31,23 +31,35 @@ export default function BudgetView({ tripMeta, days }: Props) {
 
     if (category === '餐飲') {
        filterFn = (stop) => {
+          if (stop.type) {
+              return stop.type === 'dining' || stop.type === 'cafe';
+          }
           const icon = getStopIcon(stop);
           return icon === Utensils || icon === Coffee;
        };
     } else if (category === '門票') {
        filterFn = (stop) => {
+          if (stop.type) {
+              return stop.type === 'activity' || stop.type === 'attraction' || stop.type === 'landmark' || stop.type === 'nature' || stop.type === 'history';
+          }
           const icon = getStopIcon(stop);
-          return icon === Ticket || icon === Landmark || icon === TreeDeciduous || icon === Camera;
+          return icon === Ticket || icon === Landmark || icon === Mountain || icon === Camera || icon === MapPin;
        };
     } else if (category === '交通') {
         filterFn = (stop) => {
+            if (stop.type) {
+                return stop.type === 'transport';
+            }
             const icon = getStopIcon(stop);
             return icon === Train || icon === Car || icon === Navigation;
         };
     } else {
         filterFn = (stop) => {
+             if (stop.type) {
+                 return stop.type === 'shopping' || stop.type === 'accommodation' || stop.type === 'other';
+             }
              const icon = getStopIcon(stop);
-             return icon === ShoppingBag || icon === MapPin;
+             return icon === ShoppingBag;
         };
     }
 

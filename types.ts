@@ -1,3 +1,4 @@
+
 // Input form data
 export interface TripInput {
   dateRange: string;
@@ -16,6 +17,7 @@ export interface TripInput {
 // JSON Schema from the prompt
 export interface TripStop {
   name: string;
+  type?: 'attraction' | 'landmark' | 'nature' | 'history' | 'dining' | 'cafe' | 'shopping' | 'transport' | 'activity' | 'accommodation' | 'other'; // New explicit type field
   lat: number;
   lng: number;
   startTime: string;
