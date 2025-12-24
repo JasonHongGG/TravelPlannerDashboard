@@ -163,13 +163,21 @@ export const constructUpdatePrompt = (currentData: TripData, history: Message[])
     If the user has made a selection (e.g., "Let's go with option A", "Add the ramen shop"), or gave a direct command (e.g., "Delete day 2"):
     1.  First, write a brief confirmation of what you are doing. **IMPORTANT: Do NOT use technical terms like 'JSON' or 'Data' in this confirmation. Use natural language like "I will update your itinerary with [Selection]" or "Adding that spot to your plan now". Use Traditional Chinese.**
     2.  Then, output a special separator: "___UPDATE_JSON___".
-    3.  Finally, output the COMPLETE, valid updated JSON structure.
+    3.  Finally, output the **PARTIAL** updated JSON structure.
 
-    **CRITICAL FOR JSON UPDATE**: 
+    **CRITICAL PERFORMANCE INSTRUCTION**:
+    To ensure speed, you support **PARTIAL JSON UPDATES**.
+    - If you are modifying specific days (e.g. Day 2), **ONLY** return the \`days\` array containing the **changed day objects**. 
+    - You do **NOT** need to return the days that are unchanged. The system will merge them.
+    - **Example**: If modifying Day 1, output: \`{ "days": [ { "day": 1, ...full day content... } ] }\`.
+    - If you are modifying global stats (budget/dates), include \`tripMeta\`.
+    - Always output valid JSON.
+
+    **CONTENT RULES FOR JSON UPDATE**: 
     - **Language**: Place names MUST be in the local native language (e.g. Japanese). Descriptions MUST be in Traditional Chinese.
     - Maintain "Node Purity" (Specific Place Names only).
     - Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
-    - Ensure the 'type' field is correctly set for any new stops.
+    - Ensure the 'type' field is correctly set.
   `;
 };
 

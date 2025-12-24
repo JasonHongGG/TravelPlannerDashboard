@@ -17,7 +17,7 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-const parseJsonFromResponse = (text: string): TripData => {
+const parseJsonFromResponse = (text: string, strict = true): any => {
   // Find the first '{' and the last '}' to extract the JSON object
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -29,16 +29,56 @@ const parseJsonFromResponse = (text: string): TripData => {
 
   const jsonStr = text.substring(start, end + 1);
   try {
-    const data = JSON.parse(jsonStr) as TripData;
-    // Basic validation to ensure critical fields exist
-    if (!data.tripMeta || !data.days) {
-      throw new Error("Response is missing required trip data fields (tripMeta or days).");
+    const data = JSON.parse(jsonStr);
+    // Basic validation to ensure critical fields exist ONLY if strict mode is on
+    if (strict) {
+        if (!data.tripMeta || !data.days) {
+            throw new Error("Response is missing required trip data fields (tripMeta or days).");
+        }
     }
     return data;
   } catch (e) {
     console.error("JSON Parse Error:", e);
     throw new Error("Failed to parse itinerary data.");
   }
+};
+
+// Helper to merge partial updates into full trip data
+const mergeTripData = (original: TripData, updates: Partial<TripData>): TripData => {
+  const newData = { ...original };
+
+  // 1. Merge Meta
+  if (updates.tripMeta) {
+    newData.tripMeta = { ...newData.tripMeta, ...updates.tripMeta };
+  }
+
+  // 2. Merge Days
+  if (updates.days && Array.isArray(updates.days)) {
+    // We expect updates.days to contain full objects for the days that changed.
+    // If the AI returns a day, we replace the entire day object in the original array.
+    const newDays = [...newData.days];
+    
+    updates.days.forEach(updatedDay => {
+      const index = newDays.findIndex(d => d.day === updatedDay.day);
+      if (index !== -1) {
+        // Replace the entire day object
+        newDays[index] = updatedDay;
+      } else {
+        // Add new day (rare case, e.g. extending trip)
+        newDays.push(updatedDay);
+      }
+    });
+
+    // Re-sort to be safe, in case AI added a day out of order
+    newDays.sort((a, b) => a.day - b.day);
+    newData.days = newDays;
+  }
+
+  // 3. Merge Totals/Risks (Direct replace is usually safer for lists/objects unless we want deep merge)
+  if (updates.totals) newData.totals = updates.totals;
+  if (updates.risks) newData.risks = updates.risks;
+
+  return newData;
 };
 
 // Retry helper function
@@ -69,7 +109,8 @@ export const generateTripItinerary = async (input: TripInput): Promise<TripData>
           ...AI_CONFIG.generationConfig.jsonMode,
         },
       });
-      return parseJsonFromResponse(response.text || "{}");
+      // Strict parsing for initial generation
+      return parseJsonFromResponse(response.text || "{}", true) as TripData;
     });
   } catch (error) {
     console.error("Gemini Generation Error:", error);
@@ -134,7 +175,11 @@ export const updateTripItinerary = async (
     // Final Processing
     if (isJsonMode) {
         // Scenario B: Update
-        const updatedData = parseJsonFromResponse(jsonBuffer);
+        // Relaxed parsing for updates (strict=false)
+        const partialUpdate = parseJsonFromResponse(jsonBuffer, false);
+        // Merge partial update with current data
+        const updatedData = mergeTripData(currentData, partialUpdate);
+        
         const finalText = fullText.split(delimiter)[0];
         return {
             responseText: finalText,
