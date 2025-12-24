@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
-import { Share2, Printer, CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign } from 'lucide-react';
 import Assistant from './Assistant';
 import { updateTripItinerary } from '../services/geminiService';
 import { safeRender } from '../utils/formatters';
@@ -119,12 +119,6 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full" title="分享">
-            <Share2 className="w-5 h-5" />
-          </button>
-          <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full" title="列印" onClick={() => window.print()}>
-            <Printer className="w-5 h-5" />
-          </button>
           <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> 準備就緒
           </div>

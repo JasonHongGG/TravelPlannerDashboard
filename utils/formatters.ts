@@ -1,4 +1,5 @@
 import React from 'react';
+import { TripData } from '../types';
 
 // Helper to safely render content (handles strings, numbers, objects)
 export const safeRender = (content: any): React.ReactNode => {
