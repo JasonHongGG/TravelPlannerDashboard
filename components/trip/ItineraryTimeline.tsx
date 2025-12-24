@@ -1,15 +1,46 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TripDay, TripStop } from '../../types';
 import { safeRender } from '../../utils/formatters';
 import { getStopIcon, TransportIcon } from '../../utils/icons';
-import { Clock, Info, MapPin, Navigation, CheckCircle2, Sparkles } from 'lucide-react';
+import { Clock, Info, MapPin, Navigation, Sparkles, ClipboardCheck, Check } from 'lucide-react';
 
 interface Props {
   dayData: TripDay | undefined;
   onFocusStop: (stop: TripStop) => void;
   onExplore: () => void;
 }
+
+// Sub-component for interactive checklist items with local state
+const ChecklistItem: React.FC<{ text: string }> = ({ text }) => {
+  const [isChecked, setIsChecked] = useState(false);
+
+  return (
+    <div 
+      onClick={() => setIsChecked(!isChecked)}
+      className={`
+        group flex items-start gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer select-none
+        ${isChecked 
+          ? 'bg-gray-50 border-gray-100 opacity-70' 
+          : 'bg-white border-gray-100 hover:border-brand-300 hover:shadow-md hover:-translate-y-0.5'
+        }
+      `}
+    >
+      <div className={`
+        mt-0.5 flex-shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all duration-300
+        ${isChecked
+          ? 'bg-brand-500 border-brand-500 scale-100'
+          : 'bg-white border-gray-300 group-hover:border-brand-400'
+        }
+      `}>
+        <Check className={`w-3.5 h-3.5 text-white transition-transform duration-200 ${isChecked ? 'scale-100' : 'scale-0'}`} />
+      </div>
+      <span className={`text-sm font-medium leading-relaxed transition-all duration-200 ${isChecked ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+        {safeRender(text)}
+      </span>
+    </div>
+  );
+};
 
 export default function ItineraryTimeline({ dayData, onFocusStop, onExplore }: Props) {
   if (!dayData) {
@@ -148,20 +179,31 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onExplore }: P
            })}
         </div>
 
-        {/* Daily Checklist */}
+        {/* Daily Checklist Redesigned */}
         {dayData.dailyChecklist && dayData.dailyChecklist.length > 0 && (
-           <div className="mt-8 bg-yellow-50 rounded-xl p-5 border border-yellow-200">
-              <h4 className="font-bold text-yellow-800 mb-3 flex items-center gap-2">
-                 <CheckCircle2 className="w-5 h-5" /> 第 {dayData.day} 天 待辦事項
-              </h4>
-              <ul className="space-y-2">
-                 {dayData.dailyChecklist.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-yellow-900">
-                       <input type="checkbox" className="mt-0.5 rounded text-yellow-600 focus:ring-yellow-500" />
-                       <span className="decoration-yellow-900/50 peer-checked:line-through transition-all">{safeRender(item)}</span>
-                    </li>
-                 ))}
-              </ul>
+           <div className="mt-10 mb-8 px-4 md:px-6">
+              <div className="bg-gradient-to-br from-brand-50 via-white to-white rounded-2xl border border-brand-100 shadow-sm p-6 relative overflow-hidden">
+                  {/* Decorative Background Icon */}
+                  <ClipboardCheck className="absolute -right-4 -top-4 w-32 h-32 text-brand-50 opacity-50 rotate-12 pointer-events-none" />
+                  
+                  <div className="relative z-10">
+                      <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2 text-lg">
+                          <div className="p-2 bg-white rounded-lg shadow-sm border border-brand-100">
+                             <ClipboardCheck className="w-5 h-5 text-brand-600" />
+                          </div>
+                          <span>旅行備忘錄 & 小撇步</span>
+                          <span className="text-xs font-normal text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100">
+                             Day {dayData.day}
+                          </span>
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {dayData.dailyChecklist.map((item, i) => (
+                              <ChecklistItem key={i} text={item} />
+                          ))}
+                      </div>
+                  </div>
+              </div>
            </div>
         )}
      </div>
