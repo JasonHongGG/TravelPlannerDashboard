@@ -235,7 +235,7 @@ export const constructRecommendationPrompt = (
     ? `請絕對**不要**重複推薦以下地點：${excludeNames.join(', ')}。` 
     : "";
 
-  return `請針對目的地「${location}」推薦 8 個${categoryPrompt}。
+  return `請針對目的地「${location}」推薦 12 個${categoryPrompt}。
   考慮使用者的興趣：「${interests}」。
   ${excludePrompt}
   

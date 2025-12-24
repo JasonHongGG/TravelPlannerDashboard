@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Search, Sparkles, Plus, Minus, X, Loader2, Check, MapPin, Clock, Map as MapIcon, Utensils, Mountain, Lock, Trash2, RotateCcw, List, Ban, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Sparkles, Plus, Minus, X, Loader2, Check, MapPin, Clock, Map as MapIcon, Utensils, Mountain, Lock, Trash2, RotateCcw, List, Ban, Layers, ChevronDown, ArrowDownCircle } from 'lucide-react';
 import { AttractionRecommendation, TripStop } from '../types';
 import { getAttractionRecommendations } from '../services/geminiService';
 import { getStopIcon } from '../utils/icons';
@@ -41,8 +41,19 @@ export default function AttractionExplorer({
   // Sidebar Tab State
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('must');
 
-  const [loading, setLoading] = useState(false);
+  // Loading States
+  const [initialLoading, setInitialLoading] = useState(false); // Blocking UI (First load)
+  const [isPreloading, setIsPreloading] = useState(false);     // Background loading
+  const [isWaitingForBuffer, setIsWaitingForBuffer] = useState(false); // User clicked load more but buffer empty
+
+  // Data States
   const [results, setResults] = useState<{ attraction: AttractionRecommendation[], food: AttractionRecommendation[] }>({
+    attraction: [],
+    food: []
+  });
+
+  // Buffer State for Pre-fetching (Holds the next batches)
+  const [buffer, setBuffer] = useState<{ attraction: AttractionRecommendation[], food: AttractionRecommendation[] }>({
     attraction: [],
     food: []
   });
@@ -53,52 +64,146 @@ export default function AttractionExplorer({
   // Selection state for EXISTING stops
   const [stopStatuses, setStopStatuses] = useState<Record<string, StopStatus>>({});
 
+  // Ref to track mounted state for async ops
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
   // Initial fetch when opened
   useEffect(() => {
     if (isOpen) {
-      // Sync input with prop when opened
       setLocation(initialLocation);
-
-      // Only auto-search in planning mode
-      if (mode === 'planning' && initialLocation && results[activeTab].length === 0) {
-        handleSearch(true, undefined, initialLocation);
-      }
       
-      // Initialize existing stops status to neutral if in modification mode
+      // Initialize existing stops status
       if (mode === 'modification') {
           const initialStatuses: Record<string, StopStatus> = {};
           currentStops.forEach(stop => {
               initialStatuses[stop.name] = 'neutral';
           });
           setStopStatuses(initialStatuses);
-          // Default tab for modification mode can be 'current' to see schedule first, 
-          // but user might want to see what they added. Let's stick to 'must' or 'current'.
-          // Let's default to 'current' for modification to see the itinerary first.
           setActiveSidebarTab('current');
       } else {
-          // Reset selections when reopening in planning mode
           setSelections({});
           setActiveSidebarTab('must');
+      }
+
+      // Only auto-search in planning mode if empty
+      if (mode === 'planning' && initialLocation && results[activeTab].length === 0) {
+        handleSearch(true, undefined, initialLocation);
       }
     }
   }, [isOpen, currentStops, mode, initialLocation]);
 
+  // =================================================================
+  // Pre-fetching Logic
+  // =================================================================
+  useEffect(() => {
+    // Only run if we have some initial results (user has searched)
+    const currentLen = results[activeTab].length;
+    if (currentLen === 0) return;
+
+    // Buffer Target: We want to keep about 2 batches (approx 24 items) in reserve
+    const bufferLen = buffer[activeTab].length;
+    const BUFFER_TARGET = 24; 
+
+    // If buffer is low and we aren't currently fetching, fetch more in background
+    if (bufferLen < BUFFER_TARGET && !isPreloading && !initialLoading) {
+        fetchNextBatchBackground();
+    }
+  }, [results, buffer, activeTab, isPreloading, initialLoading]);
+
+  // Watch for buffer updates to fulfill waiting requests
+  useEffect(() => {
+    if (isWaitingForBuffer && buffer[activeTab].length > 0) {
+        // Automatically consume buffer if user was waiting
+        consumeBuffer();
+        setIsWaitingForBuffer(false);
+    }
+  }, [buffer, activeTab, isWaitingForBuffer]);
+
+  const fetchNextBatchBackground = async () => {
+     if (!isMounted.current) return;
+     setIsPreloading(true);
+     
+     try {
+        const currentTab = activeTab;
+        
+        // Exclude everything we know about: Current stops + Visible Results + Buffered Results
+        const existingNames = [
+            ...currentStops.map(s => s.name),
+            ...results[currentTab].map(i => i.name),
+            ...buffer[currentTab].map(i => i.name)
+        ];
+
+        const newItems = await getAttractionRecommendations(
+            lastSearchLocation, 
+            initialInterests, 
+            currentTab, 
+            existingNames
+        );
+
+        if (isMounted.current && newItems.length > 0) {
+            setBuffer(prev => ({
+                ...prev,
+                [currentTab]: [...prev[currentTab], ...newItems]
+            }));
+        }
+     } catch (e) {
+         console.error("Background fetch failed", e);
+     } finally {
+         if (isMounted.current) setIsPreloading(false);
+     }
+  };
+
+  const consumeBuffer = () => {
+      const currentBuffer = buffer[activeTab];
+      const batchSize = 12;
+      const itemsToMove = currentBuffer.slice(0, batchSize);
+      const remainingBuffer = currentBuffer.slice(batchSize);
+
+      setResults(prev => ({
+          ...prev,
+          [activeTab]: [...prev[activeTab], ...itemsToMove]
+      }));
+
+      setBuffer(prev => ({
+          ...prev,
+          [activeTab]: remainingBuffer
+      }));
+  };
+
+  const handleLoadMore = () => {
+      const currentBuffer = buffer[activeTab];
+      
+      if (currentBuffer.length > 0) {
+          // Immediate load if buffer has data
+          consumeBuffer();
+      } else {
+          // Buffer empty, wait for it
+          setIsWaitingForBuffer(true);
+          // If not preloading (rare case where buffer is 0 and we stopped preloading?), force fetch
+          if (!isPreloading) {
+             fetchNextBatchBackground();
+          }
+      }
+  };
+
+  // =================================================================
+
   // Handle Tab Switch
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    if (results[tab].length === 0 && !loading) {
-       // Check if we should auto-search on tab change
-       // In modification mode, we only search if the user has already performed a search (results exist for other tab) 
-       // OR if they clicked the tab. 
-       // Since this is an explicit user action (click tab), we can search, but we need a valid location.
-       // We use the 'location' state or 'lastSearchLocation'.
-       
-       // If in modification mode and no search done yet (lastSearchLocation might be initialLocation), maybe wait?
-       // But if user clicks "Food", they expect food results for the current location input.
+    setIsWaitingForBuffer(false); // Reset waiting state on tab change
+    // If we have no results for this tab, trigger a fresh search
+    if (results[tab].length === 0 && !initialLoading) {
        handleSearch(true, tab);
     }
   };
 
+  // Main Search (Resets everything)
   const handleSearch = async (isNewSearch = true, overrideTab?: TabType, customLocation?: string) => {
     const query = customLocation || location;
     if (!query.trim()) return;
@@ -107,24 +212,29 @@ export default function AttractionExplorer({
 
     if (isNewSearch) {
         setLastSearchLocation(query);
+        // Clear results AND buffer
         setResults(prev => ({ ...prev, [targetTab]: [] }));
+        setBuffer(prev => ({ ...prev, [targetTab]: [] }));
+        setIsWaitingForBuffer(false);
     }
     
-    setLoading(true);
+    setInitialLoading(true);
     
-    const existingItems = isNewSearch ? [] : results[targetTab];
-    const excludeNames = [...existingItems.map(i => i.name), ...currentStops.map(s => s.name)];
-
     try {
+      // Initial fetch only excludes current stops (results are empty)
+      const excludeNames = [...currentStops.map(s => s.name)];
       const newItems = await getAttractionRecommendations(query, initialInterests, targetTab, excludeNames);
-      setResults(prev => ({
-        ...prev,
-        [targetTab]: isNewSearch ? newItems : [...prev[targetTab], ...newItems]
-      }));
+      
+      if (isMounted.current) {
+        setResults(prev => ({
+            ...prev,
+            [targetTab]: isNewSearch ? newItems : [...prev[targetTab], ...newItems]
+        }));
+      }
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setInitialLoading(false);
     }
   };
 
@@ -163,7 +273,13 @@ export default function AttractionExplorer({
   // Helper to count items
   const mustCount = Object.values(selections).filter(v => v === 'must').length;
   const avoidCount = Object.values(selections).filter(v => v === 'avoid').length;
-  const currentCount = currentStops.length; // Total current stops
+  const currentCount = currentStops.length; 
+  
+  // Calculate batch status for UI
+  // If buffer has 0-11 items, we are loading the 1st batch of the 2-batch limit.
+  // If buffer has 12+ items, we are loading the 2nd batch.
+  const bufferCount = buffer[activeTab].length;
+  const preloadingBatchNumber = bufferCount < 12 ? 1 : 2;
 
   if (!isOpen) return null;
 
@@ -195,10 +311,10 @@ export default function AttractionExplorer({
               </div>
               <button 
                 onClick={() => handleSearch(true)}
-                disabled={loading}
+                disabled={initialLoading}
                 className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-brand-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-md shadow-brand-100 whitespace-nowrap"
               >
-                {loading && results[activeTab].length === 0 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {initialLoading && results[activeTab].length === 0 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 搜尋
               </button>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400">
@@ -239,7 +355,7 @@ export default function AttractionExplorer({
             
             {/* Left: Search Results */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50/50 scrollbar-hide">
-            {loading && currentList.length === 0 ? (
+            {initialLoading && currentList.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
                     <p className="font-bold text-sm text-gray-600">正在挖掘推薦...</p>
@@ -321,10 +437,54 @@ export default function AttractionExplorer({
                     );
                     })}
                 </div>
-                <div className="mt-6 flex justify-center pb-4">
-                    <button onClick={() => handleSearch(false)} disabled={loading} className="text-sm font-bold text-brand-600 hover:underline disabled:opacity-50">
-                        {loading ? '載入中...' : '載入更多'}
-                    </button>
+                
+                {/* Designed Load More Button Area */}
+                <div className="mt-8 pb-4 relative">
+                   <div className="absolute -top-12 inset-x-0 h-12 bg-gradient-to-b from-transparent to-gray-50/50 pointer-events-none"></div>
+                   <div className="flex flex-col items-center justify-center gap-2">
+                       <button 
+                           onClick={handleLoadMore} 
+                           disabled={isWaitingForBuffer} // Disable click if already waiting
+                           className={`
+                             group relative overflow-hidden
+                             bg-white border hover:border-brand-300 hover:shadow-lg shadow-sm
+                             text-gray-600 hover:text-brand-600
+                             px-10 py-3 rounded-full 
+                             font-bold text-sm transition-all duration-300
+                             flex items-center gap-3
+                             disabled:opacity-80 disabled:cursor-not-allowed
+                           `}
+                       >
+                           {/* Background animation for waiting state */}
+                           {isWaitingForBuffer && (
+                               <div className="absolute inset-0 bg-gray-50/50 flex items-center justify-center">
+                                   <div className="h-full w-full bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
+                               </div>
+                           )}
+
+                           {isWaitingForBuffer ? (
+                               <>
+                                 <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                                 <span>載入中...</span>
+                               </>
+                           ) : (
+                               <>
+                                 <span>載入更多</span>
+                                 <ArrowDownCircle className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                               </>
+                           )}
+                       </button>
+                       
+                       {/* Pre-loading Status Text */}
+                       <div className="h-5 text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                           {isPreloading && !isWaitingForBuffer && (
+                               <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  <span>正在預載入({preloadingBatchNumber}/2)</span>
+                               </>
+                           )}
+                       </div>
+                   </div>
                 </div>
                 </>
             ) : (
