@@ -27,8 +27,10 @@ export default function TripMap({ mapState, selectedDay, currentDayData, onReset
             allowFullScreen
           ></iframe>
           
-          {/* Top Right Floating Menu */}
-          <div className="absolute top-6 right-6 z-20 flex flex-col items-end">
+          {/* Top Right Floating Controls: Map Menu Only */}
+          <div className="absolute top-6 right-6 z-20 flex items-start gap-3">
+             
+             {/* Map Route Menu */}
              <div 
                className={`bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 transition-all duration-300 overflow-hidden flex flex-col ${
                  isMapMenuOpen ? 'w-72 max-h-[calc(100vh-120px)]' : 'w-auto'

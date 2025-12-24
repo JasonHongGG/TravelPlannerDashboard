@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
-import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Layout } from 'lucide-react';
 import Assistant from './Assistant';
 import { updateTripItinerary } from '../services/geminiService';
 import { safeRender } from '../utils/formatters';
@@ -21,6 +21,7 @@ interface Props {
 export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'budget' | 'risks'>('itinerary');
+  const [isMapOpen, setIsMapOpen] = useState(true); // State to toggle map visibility
   
   // State for Map URL and Label
   const [mapState, setMapState] = useState<{ url: string; label: string }>({
@@ -50,6 +51,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
         url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
         label: `📍 ${stop.name}`
     });
+    // If map is closed when focusing, open it
+    if (!isMapOpen) {
+        setIsMapOpen(true);
+    }
   };
 
   // AI Update Handler
@@ -129,7 +134,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* Left Column: Itinerary (Scrollable) */}
-        <div className="w-full lg:w-7/12 xl:w-1/2 overflow-y-auto bg-gray-50 flex flex-col scrollbar-hide">
+        {/* Adjusted width logic based on isMapOpen state */}
+        <div className={`w-full flex flex-col scrollbar-hide bg-gray-50 overflow-y-auto transition-all duration-300 ease-in-out ${isMapOpen ? 'lg:w-7/12 xl:w-1/2' : 'lg:w-full'}`}>
           
           {/* Hero / Cover Section */}
           <div className="relative h-64 flex-shrink-0 w-full bg-gray-900 group">
@@ -153,8 +159,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
             </div>
           </div>
 
-          {/* Tab Navigation (Main Sections) */}
-          <div className="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 pt-4 flex-none shadow-sm">
+          {/* Tab Navigation (Main Sections) & Map Toggle */}
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-40 px-6 pt-4 flex-none shadow-sm flex justify-between items-center">
              <div className="flex space-x-6">
                 <button 
                   onClick={() => setActiveTab('itinerary')}
@@ -173,6 +179,22 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
                   className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'risks' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
                   風險提示
+                </button>
+             </div>
+
+             {/* Map Toggle Button - Placed here for better coordination */}
+             <div className="hidden lg:block pb-2">
+                <button
+                  onClick={() => setIsMapOpen(!isMapOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    isMapOpen 
+                      ? 'bg-brand-50 text-brand-600 border-brand-200 shadow-inner' 
+                      : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
+                  title={isMapOpen ? "隱藏地圖" : "顯示地圖"}
+                >
+                  {isMapOpen ? <PanelRightClose className="w-4 h-4" /> : <MapIcon className="w-4 h-4" />}
+                  {isMapOpen ? "收起地圖" : "地圖模式"}
                 </button>
              </div>
           </div>
@@ -226,7 +248,12 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
         </div>
 
         {/* Right Column: Sticky Map (Hidden on mobile) */}
-        <div className="hidden lg:block lg:w-5/12 xl:w-1/2">
+        {/* Added dynamic width classes. Button is now handled inside TripMap */}
+        <div 
+          className={`hidden lg:block relative transition-all duration-300 ease-in-out ${
+            isMapOpen ? 'lg:w-5/12 xl:w-1/2 opacity-100' : 'w-0 opacity-0 overflow-hidden'
+          }`}
+        >
             <TripMap 
                mapState={mapState} 
                selectedDay={selectedDay} 
