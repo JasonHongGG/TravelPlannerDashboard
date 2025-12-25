@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Trip, TripInput, TripData } from '../types';
-import { generateTripItinerary } from '../services/geminiService';
+import { aiService } from '../services';
 
 export const useTripManager = () => {
   // Initialize state directly from localStorage
@@ -30,8 +31,8 @@ export const useTripManager = () => {
 
     setTrips(prev => [newTrip, ...prev]);
     
-    // Trigger AI Generation in background
-    generateTripItinerary(input)
+    // Trigger AI Generation in background via the abstract service
+    aiService.generateTrip(input)
       .then(data => {
         setTrips(prev => prev.map(t => 
           t.id === newTrip.id 

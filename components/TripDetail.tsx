@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
 import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2 } from 'lucide-react';
 import Assistant from './Assistant';
-import { updateTripItinerary } from '../services/geminiService';
+import { aiService } from '../services'; // Import singleton service
 import { safeRender } from '../utils/formatters';
 import { getDayMapConfig } from '../utils/mapHelpers';
 import { constructExplorerUpdatePrompt } from '../config/aiConfig';
@@ -67,7 +68,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
   const handleAiUpdate = async (history: Message[], onThought: (text: string) => void): Promise<string> => {
     if (!trip.data) return "";
     try {
-      const result = await updateTripItinerary(trip.data, history, onThought);
+      const result = await aiService.updateTrip(trip.data, history, onThought);
       if (result.updatedData) {
         onUpdateTrip(trip.id, result.updatedData);
       }
@@ -110,11 +111,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
             { role: 'user', text: prompt, timestamp: Date.now() }
         ];
 
-        const result = await updateTripItinerary(
+        const result = await aiService.updateTrip(
             trip.data, 
             syntheticHistory, 
             (thought) => { 
-                // We could show a toast or status here with the thought
                 console.log("AI Thinking:", thought);
             }
         );

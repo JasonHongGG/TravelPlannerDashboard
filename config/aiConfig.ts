@@ -2,22 +2,6 @@
 import { TripInput, TripData, Message } from "../types";
 
 // ==========================================
-// AI Model Configuration
-// ==========================================
-export const AI_CONFIG = {
-  // Models
-  models: {
-    tripGenerator: 'gemini-3-pro-preview', // Strong reasoning for complex itinerary
-    tripUpdater: 'gemini-3-pro-preview',   // Strong reasoning for context updates
-    recommender: 'gemini-3-flash-preview', // Fast speed for simple lists
-  },
-  // Generation Configs
-  generationConfig: {
-    jsonMode: { responseMimeType: 'application/json' },
-  }
-};
-
-// ==========================================
 // System Instructions
 // ==========================================
 export const SYSTEM_INSTRUCTION = `

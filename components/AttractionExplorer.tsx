@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Sparkles, Plus, Minus, X, Loader2, Check, MapPin, Clock, Map as MapIcon, Utensils, Mountain, Lock, Trash2, RotateCcw, List, Ban, Layers, ChevronDown, ArrowDownCircle } from 'lucide-react';
 import { AttractionRecommendation, TripStop } from '../types';
-import { getAttractionRecommendations } from '../services/geminiService';
+import { aiService } from '../services';
 import { getStopIcon } from '../utils/icons';
 
 interface Props {
@@ -138,7 +138,7 @@ export default function AttractionExplorer({
             ...buffer[currentTab].map(i => i.name)
         ];
 
-        const newItems = await getAttractionRecommendations(
+        const newItems = await aiService.getRecommendations(
             lastSearchLocation, 
             initialInterests, 
             currentTab, 
@@ -223,7 +223,7 @@ export default function AttractionExplorer({
     try {
       // Initial fetch only excludes current stops (results are empty)
       const excludeNames = [...currentStops.map(s => s.name)];
-      const newItems = await getAttractionRecommendations(query, initialInterests, targetTab, excludeNames);
+      const newItems = await aiService.getRecommendations(query, initialInterests, targetTab, excludeNames);
       
       if (isMounted.current) {
         setResults(prev => ({
