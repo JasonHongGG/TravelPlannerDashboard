@@ -7,7 +7,7 @@
 
 export const SERVICE_CONFIG = {
   // Change this value to switch providers manually at deployment time
-  provider: 'ollama' as 'gemini' | 'ollama',
+  provider: 'gemini' as 'gemini' | 'ollama',
 
   // Google Gemini Configuration
   gemini: {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trip } from '../types';
-import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles } from 'lucide-react';
+import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check } from 'lucide-react';
 
 interface Props {
   trips: Trip[];
@@ -106,6 +106,12 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport 
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-brand-600 backdrop-blur-md shadow-sm">
                             <Loader2 className="w-3 h-3 animate-spin" /> 
                             生成中 <LiveTimer startTime={trip.createdAt} />
+                        </span>
+                    )}
+                    {trip.status === 'complete' && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-green-600 backdrop-blur-md shadow-sm animate-in fade-in zoom-in">
+                            <Check className="w-3 h-3" />
+                            生成完成 {trip.generationTimeMs ? (trip.generationTimeMs / 1000).toFixed(1) : 0}s
                         </span>
                     )}
                     {trip.status === 'error' && (
