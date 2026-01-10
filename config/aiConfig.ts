@@ -231,3 +231,40 @@ export const constructRecommendationPrompt = (
   - openHours: 營業時間 (如：09:00 - 18:00，若為 24 小時則註明，若不清楚請提供合理推估)
   `;
 };
+
+export const constructFeasibilityPrompt = (
+  tripData: TripData,
+  modificationContext: string
+): string => {
+  return `
+    You are a professional travel logistics analyzer. 
+    Your job is to check if a proposed change to an itinerary is **feasible** and **sensible**.
+
+    **Current Itinerary (Context):**
+    ${JSON.stringify(tripData)}
+
+    **Proposed Change / User Intent:**
+    ${modificationContext}
+
+    **FEASIBILITY RULES (Strictly Enforce):**
+    1. **Geographical Distance**: Is the user trying to jump between distant cities (e.g., Tokyo to Osaka) in a single day without realistic travel time?
+    2. **Time Constraint**: If the day has too many stops, will the average time per stop drop below 30-45 minutes (excluding transport)? If so, it is "High Risk".
+    3. **Overcrowding**: Is the user adding a major attraction (e.g., Universal Studios, Disney) to a day that already has full itinerary?
+
+    **Output JSON Format (No Markdown):**
+    {
+       "feasible": boolean, // true if reasonable, false if physically impossible or extremely rushed
+       "riskLevel": "low" | "moderate" | "high",
+       "issues": ["List of specific problems in Traditional Chinese"],
+       "suggestions": ["List of actionable solutions in Traditional Chinese e.g. 'Move X to Day 3', 'Remove Y'"]
+    }
+
+    **Example Issues:**
+    - "Day 2 行程過於緊湊，加入大阪難波後，東京至大阪來回需 5 小時，剩餘遊玩時間不足。"
+    - "Day 1 景點過多（8 個），平均每個景點僅能停留 20 分鐘。"
+
+    **Example Suggestions:**
+    - "建議將大阪行程獨立安排在另一天。"
+    - "建議移除 Day 1 的兩個次要購物點。"
+  `;
+};

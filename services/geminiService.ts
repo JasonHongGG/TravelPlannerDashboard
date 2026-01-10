@@ -1,11 +1,12 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { TripInput, TripData, Message, AttractionRecommendation } from "../types";
+import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult } from "../types";
 import { 
   SYSTEM_INSTRUCTION, 
   constructTripPrompt, 
   constructUpdatePrompt, 
-  constructRecommendationPrompt 
+  constructRecommendationPrompt,
+  constructFeasibilityPrompt
 } from "../config/aiConfig";
 import { SERVICE_CONFIG } from "../config/serviceConfig";
 import { IAIService, UpdateResult } from "./aiInterface";
@@ -180,6 +181,40 @@ export class GeminiService implements IAIService {
     } catch (e) {
       console.error("Failed to parse recommendations", e);
       return [];
+    }
+  }
+
+  async checkFeasibility(
+    currentData: TripData,
+    modificationContext: string
+  ): Promise<FeasibilityResult> {
+    const ai = this.getClient();
+    const prompt = constructFeasibilityPrompt(currentData, modificationContext);
+
+    const response = await ai.models.generateContent({
+      model: SERVICE_CONFIG.gemini.models.recommender, // Use faster model for check
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+             feasible: { type: Type.BOOLEAN },
+             riskLevel: { type: Type.STRING, enum: ['low', 'moderate', 'high'] },
+             issues: { type: Type.ARRAY, items: { type: Type.STRING } },
+             suggestions: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ['feasible', 'riskLevel', 'issues', 'suggestions']
+        }
+      },
+    });
+
+    try {
+        return JSON.parse(response.text || "{}");
+    } catch (e) {
+        console.error("Failed to parse feasibility check", e);
+        // Default to safe/feasible if parsing fails, to avoid blocking flow
+        return { feasible: true, riskLevel: 'low', issues: [], suggestions: [] };
     }
   }
 }

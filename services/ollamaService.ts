@@ -1,10 +1,11 @@
 
-import { TripInput, TripData, Message, AttractionRecommendation } from "../types";
+import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult } from "../types";
 import { 
   SYSTEM_INSTRUCTION, 
   constructTripPrompt, 
   constructUpdatePrompt, 
-  constructRecommendationPrompt 
+  constructRecommendationPrompt,
+  constructFeasibilityPrompt
 } from "../config/aiConfig";
 import { IAIService, UpdateResult } from "./aiInterface";
 import { SERVICE_CONFIG } from "../config/serviceConfig";
@@ -217,4 +218,23 @@ export class OllamaService implements IAIService {
             return [];
         }
     }
+
+    async checkFeasibility(
+        currentData: TripData,
+        modificationContext: string
+      ): Promise<FeasibilityResult> {
+        const prompt = constructFeasibilityPrompt(currentData, modificationContext);
+        const messages = [
+            { role: 'user', content: prompt }
+        ];
+    
+        try {
+            const response = await this.callOllama(messages, this.models.recommender, 'json', false);
+            const data = await response.json();
+            return this.parseJsonFromOllama(data.message.content, false);
+        } catch (e) {
+            console.error("Ollama Feasibility Error", e);
+            return { feasible: true, riskLevel: 'low', issues: [], suggestions: [] };
+        }
+      }
 }

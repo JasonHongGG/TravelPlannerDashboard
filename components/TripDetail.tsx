@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trip, TripData, TripMeta, TripStop, Message, FeasibilityResult } from '../types';
 import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2 } from 'lucide-react';
 import Assistant from './Assistant';
 import { aiService } from '../services'; // Import singleton service
@@ -14,6 +14,7 @@ import ItineraryTimeline from './trip/ItineraryTimeline';
 import BudgetView from './trip/BudgetView';
 import TripMap from './trip/TripMap';
 import AttractionExplorer from './AttractionExplorer';
+import FeasibilityModal from './FeasibilityModal';
 
 interface Props {
   trip: Trip;
@@ -29,6 +30,16 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
   // Attraction Explorer State
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [isUpdatingFromExplorer, setIsUpdatingFromExplorer] = useState(false);
+
+  // Feasibility Check State
+  const [isCheckingFeasibility, setIsCheckingFeasibility] = useState(false);
+  const [feasibilityResult, setFeasibilityResult] = useState<FeasibilityResult | null>(null);
+  
+  // Pending Actions/Data
+  // pendingUpdateAction: 用於 Explorer (尚未生成，等待執行生成函數)
+  const [pendingUpdateAction, setPendingUpdateAction] = useState<(() => Promise<void>) | null>(null);
+  // pendingNewData: 用於 Chat (已生成資料，等待確認寫入)
+  const [pendingNewData, setPendingNewData] = useState<TripData | null>(null);
 
   // State for Map URL and Label
   const [mapState, setMapState] = useState<{ url: string; label: string }>({
@@ -64,19 +75,96 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
     }
   };
 
+  // Helper to execute check (Used by Explorer)
+  const performFeasibilityCheck = async (context: string, executeIfSafe: () => Promise<void>) => {
+      if (!trip.data) return;
+      
+      setIsCheckingFeasibility(true);
+      try {
+          // For Explorer, we check against the CURRENT data because the new data doesn't exist yet
+          const result = await aiService.checkFeasibility(trip.data, context);
+          
+          if (!result.feasible || result.riskLevel === 'high' || result.riskLevel === 'moderate') {
+              setFeasibilityResult(result);
+              setPendingUpdateAction(() => executeIfSafe);
+          } else {
+              // Safe enough, proceed directly
+              await executeIfSafe();
+          }
+      } catch (e) {
+          console.error("Check failed", e);
+          await executeIfSafe();
+      } finally {
+          setIsCheckingFeasibility(false);
+      }
+  };
+
+  const handleFeasibilityConfirm = async () => {
+      // Case 1: Explorer (Action waiting to be executed)
+      if (pendingUpdateAction) {
+          await pendingUpdateAction();
+      }
+      
+      // Case 2: Chat (Data waiting to be applied)
+      if (pendingNewData) {
+          onUpdateTrip(trip.id, pendingNewData);
+      }
+
+      setFeasibilityResult(null);
+      setPendingUpdateAction(null);
+      setPendingNewData(null);
+  };
+
+  const handleFeasibilityCancel = () => {
+      setFeasibilityResult(null);
+      setPendingUpdateAction(null);
+      setPendingNewData(null);
+      setIsUpdatingFromExplorer(false); // Ensure loading overlay is cleared
+  };
+
+
   // AI Update Handler (Used by Assistant)
+  // Modified Logic: Generate First -> Check Data -> Apply
   const handleAiUpdate = async (history: Message[], onThought: (text: string) => void): Promise<string> => {
     if (!trip.data) return "";
-    try {
-      const result = await aiService.updateTrip(trip.data, history, onThought);
-      if (result.updatedData) {
-        onUpdateTrip(trip.id, result.updatedData);
-      }
-      return result.responseText;
-    } catch (e) {
-      console.error("Failed to update trip via AI", e);
-      throw e; 
+    
+    // 1. 先讓 AI 處理對話與生成 (無論是聊天還是修改)
+    const result = await aiService.updateTrip(trip.data!, history, onThought);
+    
+    // 2. 如果結果中沒有 updatedData，表示 AI 認為這只是一般對話，不需要檢查可行性
+    if (!result.updatedData) {
+        return result.responseText;
     }
+
+    // 3. 如果有 updatedData，表示行程被修改了，這時候才進行檢查
+    // 注意：我們檢查的是 result.updatedData (新行程)，看看新行程是否合理
+    setIsCheckingFeasibility(true);
+    try {
+        const lastMsg = history[history.length - 1].text;
+        const checkResult = await aiService.checkFeasibility(
+            result.updatedData, // Check the PROPOSED itinerary
+            `User Chat Request: ${lastMsg}`
+        );
+
+        if (!checkResult.feasible || checkResult.riskLevel === 'high') {
+             // 4a. 風險高 -> 顯示 Modal，暫存數據 (pendingNewData)
+             setFeasibilityResult(checkResult);
+             setPendingNewData(result.updatedData);
+             
+             // 我們仍回傳 AI 的文字回應，讓對話框顯示「好的，我已為您安排...」
+             // 但實際上 UI 尚未更新，直到用戶在 Modal 點擊確認
+             setIsCheckingFeasibility(false);
+             return result.responseText;
+        } 
+    } catch (e) {
+        console.warn("Feasibility check failed, proceeding anyway", e);
+    } finally {
+        setIsCheckingFeasibility(false);
+    }
+    
+    // 4b. 風險低或檢查通過 -> 直接更新
+    onUpdateTrip(trip.id, result.updatedData);
+    return result.responseText;
   };
 
   // Handler for Explorer Confirmation
@@ -92,42 +180,51 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
     if (newMustVisit.length === 0 && newAvoid.length === 0 && keepExisting.length === 0 && removeExisting.length === 0) {
         return;
     }
-    
-    setIsUpdatingFromExplorer(true);
-    
-    try {
-        // Use the new centralized prompt constructor
-        const prompt = constructExplorerUpdatePrompt(
-            selectedDay,
-            newMustVisit,
-            newAvoid,
-            keepExisting,
-            removeExisting
-        );
 
-        // We construct a synthetic history to instruct the update logic
-        // This bypasses the Assistant UI history but uses the same service logic
-        const syntheticHistory: Message[] = [
-            { role: 'user', text: prompt, timestamp: Date.now() }
-        ];
+    const context = `
+      Modification for Day ${selectedDay}:
+      Add: ${newMustVisit.join(', ')}
+      Remove: ${newAvoid.join(', ')}
+      Keep: ${keepExisting.join(', ')}
+    `;
 
-        const result = await aiService.updateTrip(
-            trip.data, 
-            syntheticHistory, 
-            (thought) => { 
-                console.log("AI Thinking:", thought);
+    // Define the actual update logic
+    const executeExplorerUpdate = async () => {
+        setIsUpdatingFromExplorer(true);
+        try {
+            const prompt = constructExplorerUpdatePrompt(
+                selectedDay,
+                newMustVisit,
+                newAvoid,
+                keepExisting,
+                removeExisting
+            );
+
+            const syntheticHistory: Message[] = [
+                { role: 'user', text: prompt, timestamp: Date.now() }
+            ];
+
+            const result = await aiService.updateTrip(
+                trip.data!, 
+                syntheticHistory, 
+                (thought) => { 
+                    console.log("AI Thinking:", thought);
+                }
+            );
+
+            if (result.updatedData) {
+                onUpdateTrip(trip.id, result.updatedData);
             }
-        );
-
-        if (result.updatedData) {
-            onUpdateTrip(trip.id, result.updatedData);
+        } catch (e) {
+            console.error("Failed to update trip from explorer", e);
+            alert("更新行程時發生錯誤，請稍後再試。");
+        } finally {
+            setIsUpdatingFromExplorer(false);
         }
-    } catch (e) {
-        console.error("Failed to update trip from explorer", e);
-        alert("更新行程時發生錯誤，請稍後再試。");
-    } finally {
-        setIsUpdatingFromExplorer(false);
-    }
+    };
+
+    // Run Check First (Explorer Flow is explicitly a modification, so pre-check is fine here)
+    performFeasibilityCheck(context, executeExplorerUpdate);
   };
 
   // Error State
@@ -171,8 +268,18 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden relative">
       
-      {/* Global Loading Overlay for Explorer Update */}
-      {isUpdatingFromExplorer && (
+      {/* Feasibility Check Modal */}
+      {feasibilityResult && (
+          <FeasibilityModal 
+            isOpen={!!feasibilityResult}
+            result={feasibilityResult}
+            onCancel={handleFeasibilityCancel}
+            onProceed={handleFeasibilityConfirm}
+          />
+      )}
+
+      {/* Global Loading Overlay for Explorer Update or Checking */}
+      {(isUpdatingFromExplorer || isCheckingFeasibility) && (
         <div className="absolute inset-0 z-[70] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
             <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center max-w-sm text-center">
                 <div className="relative mb-4">
@@ -181,8 +288,15 @@ export default function TripDetail({ trip, onBack, onUpdateTrip }: Props) {
                       <MapIcon className="w-6 h-6 text-brand-600 animate-pulse" />
                    </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">正在為您重塑行程</h3>
-                <p className="text-gray-500 text-sm">AI 正在根據您選擇的景點，重新計算最佳路線與時間安排...</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {isCheckingFeasibility ? "正在評估行程可行性" : "正在為您重塑行程"}
+                </h3>
+                <p className="text-gray-500 text-sm">
+                    {isCheckingFeasibility 
+                        ? "AI 正在檢查路線順暢度與時間安排..." 
+                        : "AI 正在根據您選擇的景點，重新計算最佳路線與時間安排..."
+                    }
+                </p>
             </div>
         </div>
       )}

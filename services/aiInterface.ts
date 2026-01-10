@@ -1,5 +1,5 @@
 
-import { TripInput, TripData, Message, AttractionRecommendation } from "../types";
+import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult } from "../types";
 
 export interface UpdateResult {
     responseText: string;
@@ -31,4 +31,12 @@ export interface IAIService {
         category?: 'attraction' | 'food',
         excludeNames?: string[]
     ): Promise<AttractionRecommendation[]>;
+
+    /**
+     * Checks if a proposed modification is feasible.
+     */
+    checkFeasibility(
+        currentData: TripData,
+        modificationContext: string
+    ): Promise<FeasibilityResult>;
 }
