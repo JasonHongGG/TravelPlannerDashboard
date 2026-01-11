@@ -7,7 +7,7 @@
 
 export const SERVICE_CONFIG = {
   // Change this value to switch providers manually at deployment time
-  provider: 'gemini' as 'gemini' | 'ollama',
+  provider: 'local_api' as 'gemini' | 'ollama' | 'local_api',
 
   // Google Gemini Configuration
   gemini: {
@@ -26,5 +26,16 @@ export const SERVICE_CONFIG = {
       tripUpdater: 'llama3.3:70b',   // 處理對話修改
       recommender: 'gemma3:12b',   // 簡單列表生成 (可以用較小的模型如 gemma:7b 以加速)
     }
+  },
+
+  // Local Custom API Configuration
+  local_api: {
+    baseUrl: '/local-api',
+    models: {
+      tripGenerator: 'gemini-3-pro-thinking',
+      tripUpdater: 'gemini-3-pro-thinking',
+      recommender: 'gemini-3-flash',
+    }
   }
+
 };
