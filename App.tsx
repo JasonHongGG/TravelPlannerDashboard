@@ -4,6 +4,8 @@ import Dashboard from './components/Dashboard';
 import NewTripForm from './components/NewTripForm';
 import TripDetail from './components/TripDetail';
 import { useTripManager } from './hooks/useTripManager';
+import { useAuth } from './context/AuthContext';
+import LoginScreen from './components/LoginScreen';
 
 export default function App() {
   const { trips, createTrip, updateTripData, deleteTrip, importTrip } = useTripManager();
@@ -40,6 +42,12 @@ export default function App() {
     };
     initDB();
   }, []);
+
+  const { user } = useAuth(); // Access user state
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <>
