@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LogOut, User, Coins, History, ChevronDown, ChevronUp, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePoints } from '../context/PointsContext';
+import PurchasePointsModal from './PurchasePointsModal';
 
 export default function UserProfileMenu() {
     const { user, logout } = useAuth();
@@ -17,6 +19,9 @@ export default function UserProfileMenu() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    const { balance } = usePoints();
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     if (!user) return null;
 
@@ -41,7 +46,7 @@ export default function UserProfileMenu() {
 
                 <div className="flex flex-col items-start mr-1 hidden sm:flex">
                     <span className="text-xs font-bold text-gray-700 leading-tight">{user.name}</span>
-                    <span className="text-[10px] font-medium text-brand-600">520 P</span>
+                    <span className="text-[10px] font-medium text-brand-600">{balance} P</span>
                 </div>
 
                 {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
@@ -82,11 +87,17 @@ export default function UserProfileMenu() {
                                     </div>
                                 </div>
                                 <div className="flex items-baseline gap-1 mb-4">
-                                    <span className="text-2xl font-black tracking-tight">520</span>
+                                    <span className="text-2xl font-black tracking-tight">{balance}</span>
                                     <span className="text-sm font-medium text-gray-400">P</span>
                                 </div>
 
-                                <button className="w-full py-2 bg-white text-gray-900 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        setIsPurchaseModalOpen(true);
+                                    }}
+                                    className="w-full py-2 bg-white text-gray-900 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                                >
                                     <CreditCard className="w-3 h-3" />
                                     儲值點數
                                 </button>
@@ -118,6 +129,11 @@ export default function UserProfileMenu() {
                     </div>
                 </div>
             )}
+
+            <PurchasePointsModal
+                isOpen={isPurchaseModalOpen}
+                onClose={() => setIsPurchaseModalOpen(false)}
+            />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import NewTripForm from './components/NewTripForm';
 import TripDetail from './components/TripDetail';
 import { useTripManager } from './hooks/useTripManager';
 import { useAuth } from './context/AuthContext';
+import { PointsProvider } from './context/PointsContext';
 import LoginScreen from './components/LoginScreen';
 
 export default function App() {
@@ -51,31 +52,33 @@ export default function App() {
 
   return (
     <>
-      {view === 'dashboard' && (
-        <Dashboard
-          trips={trips}
-          onNewTrip={() => setIsModalOpen(true)}
-          onSelectTrip={handleSelectTrip}
-          onDeleteTrip={handleDeleteTrip}
-          onImportTrip={handleImportTrip}
-        />
-      )}
+      <PointsProvider>
+        {view === 'dashboard' && (
+          <Dashboard
+            trips={trips}
+            onNewTrip={() => setIsModalOpen(true)}
+            onSelectTrip={handleSelectTrip}
+            onDeleteTrip={handleDeleteTrip}
+            onImportTrip={handleImportTrip}
+          />
+        )}
 
-      {view === 'detail' && selectedTrip && (
-        <TripDetail
-          trip={selectedTrip}
-          onBack={() => setView('dashboard')}
-          onUpdateTrip={updateTripData}
-        />
-      )}
+        {view === 'detail' && selectedTrip && (
+          <TripDetail
+            trip={selectedTrip}
+            onBack={() => setView('dashboard')}
+            onUpdateTrip={updateTripData}
+          />
+        )}
 
-      {isModalOpen && (
-        <NewTripForm
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={createTrip}
-        />
-      )}
+        {isModalOpen && (
+          <NewTripForm
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={createTrip}
+          />
+        )}
+      </PointsProvider>
     </>
   );
 }
