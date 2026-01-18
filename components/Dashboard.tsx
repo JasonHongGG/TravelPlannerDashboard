@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trip } from '../types';
 import UserProfileMenu from './UserProfileMenu';
-import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check } from 'lucide-react';
+import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check, RefreshCw } from 'lucide-react';
 
 interface Props {
   trips: Trip[];
@@ -10,6 +10,7 @@ interface Props {
   onSelectTrip: (trip: Trip) => void;
   onDeleteTrip: (id: string) => void;
   onImportTrip: (trip: Trip) => void;
+  onRetryTrip: (tripId: string) => void;
 }
 
 // ==========================================
@@ -71,14 +72,16 @@ interface TripCardProps {
   trip: Trip;
   onSelect: () => void;
   onDelete: () => void;
+  onDelete: () => void;
   onExport: (e: React.MouseEvent) => void;
+  onRetry: (e: React.MouseEvent) => void;
 }
 
 // New Trip Card Component
-const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport }) => {
+const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport, onRetry }) => {
   // Generate a cover image based on destination
   const city = trip.input.destination.split(',')[0].split(' ')[0]; // Simple extraction
-  const imageUrl = `https://image.pollinations.ai/prompt/cinematic%20travel%20photography%20of%20${encodeURIComponent(city)}%20landmark%20beautiful%20scenery?width=800&height=500&nologo=true&seed=${trip.id}`;
+  const imageUrl = `https://loremflickr.com/800/500/${encodeURIComponent(city)},travel/all`;
 
   return (
     <div
@@ -115,9 +118,16 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport 
             </span>
           )}
           {trip.status === 'error' && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-red-500 text-white shadow-sm">
-              生成失敗
-            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetry(e);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-red-500 text-white shadow-sm hover:bg-red-600 transition-colors z-10 cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" />
+              生成失敗 - 點此重試
+            </button>
           )}
         </div>
       </div>
@@ -174,7 +184,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport 
 // Main Component
 // ==========================================
 
-export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip, onImportTrip }: Props) {
+export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip, onImportTrip, onRetryTrip }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = (e: React.MouseEvent, trip: Trip) => {
@@ -319,7 +329,9 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
                 trip={trip}
                 onSelect={() => onSelectTrip(trip)}
                 onDelete={() => onDeleteTrip(trip.id)}
+                onDelete={() => onDeleteTrip(trip.id)}
                 onExport={(e) => handleExport(e, trip)}
+                onRetry={() => onRetryTrip(trip.id)}
               />
             </div>
           ))}

@@ -1,4 +1,5 @@
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { CopilotClient } from "@github/copilot-sdk";
@@ -39,6 +40,12 @@ const client = new CopilotClient({
 
 // Update global PATH for this process
 process.env.PATH = `${binPath}${path.delimiter}${process.env.PATH}`;
+
+if (process.env.GITHUB_TOKEN) {
+    console.log('[Auth] GITHUB_TOKEN detected in environment.');
+} else {
+    console.warn('[Auth] WARNING: GITHUB_TOKEN not found in environment. Authentication may fail unless "gh auth login" has been run.');
+}
 
 // Ensure client is started.
 client.start()

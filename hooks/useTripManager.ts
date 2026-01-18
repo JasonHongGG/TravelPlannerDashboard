@@ -72,6 +72,49 @@ export const useTripManager = () => {
       });
   };
 
+  const retryTrip = async (tripId: string) => {
+    const trip = trips.find(t => t.id === tripId);
+    if (!trip) return;
+
+    // Calculate Cost
+    const cost = calculateTripCost(trip.input.dateRange);
+
+    // Check Balance
+    if (balance < cost) {
+      alert(`點數不足！重試此行程需要 ${cost} 點，目前餘額 ${balance} 點。`);
+      return;
+    }
+
+    // Set status to generating
+    setTrips(prev => prev.map(t =>
+      t.id === tripId
+        ? { ...t, status: 'generating', errorMsg: undefined, createdAt: Date.now() } // Reset createdAt for timer
+        : t
+    ));
+
+    // Trigger AI Generation
+    aiService.generateTrip(trip.input)
+      .then(async (data) => {
+        const success = await spendPoints(cost, `重試生成行程: ${trip.input.destination}`);
+        if (!success) {
+          console.warn("Points deduction failed.");
+        }
+
+        setTrips(prev => prev.map(t =>
+          t.id === tripId
+            ? { ...t, status: 'complete', data, generationTimeMs: Date.now() - (t.createdAt || Date.now()) }
+            : t
+        ));
+      })
+      .catch(err => {
+        setTrips(prev => prev.map(t =>
+          t.id === tripId
+            ? { ...t, status: 'error', errorMsg: err.message, generationTimeMs: Date.now() - (t.createdAt || Date.now()) }
+            : t
+        ));
+      });
+  };
+
   const updateTripData = (tripId: string, newData: TripData) => {
     setTrips(prev => prev.map(t =>
       t.id === tripId
@@ -100,6 +143,7 @@ export const useTripManager = () => {
     createTrip,
     updateTripData,
     deleteTrip,
-    importTrip
+    importTrip,
+    retryTrip
   };
 };
