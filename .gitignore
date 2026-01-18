@@ -27,4 +27,8 @@ dist-ssr
 data/
 database/
 *.db
+*.db
 *.sqlite
+
+# Secrets
+.env
