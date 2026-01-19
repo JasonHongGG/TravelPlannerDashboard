@@ -60,11 +60,11 @@ export class CopilotService implements IAIService {
         return newData;
     }
 
-    private async postGenerate(prompt: string, model: string, systemInstruction?: string, userId?: string, cost?: number, description?: string): Promise<string> {
+    private async postGenerate(prompt: string, model: string, systemInstruction?: string, userId?: string, action: string = 'GENERATE_TRIP', description?: string, tripInput?: TripInput): Promise<string> {
         const response = await fetch(`${SERVER_URL}/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, model, systemInstruction, userId, cost, description })
+            body: JSON.stringify({ prompt, model, systemInstruction, userId, action, description, tripInput })
         });
 
         if (!response.ok) {
@@ -76,11 +76,19 @@ export class CopilotService implements IAIService {
         return data.text;
     }
 
-    async generateTrip(input: TripInput, userId?: string, cost?: number): Promise<TripData> {
-        const prompt = constructTripPrompt(input);
+    async generateTrip(input: TripInput, userId?: string): Promise<TripData> {
+        // Backend now handles prompt construction for security. We send the raw input.
         const model = SERVICE_CONFIG.copilot?.models.tripGenerator || 'gpt-4o';
 
-        const responseText = await this.postGenerate(prompt, model, SYSTEM_INSTRUCTION, userId, cost, `Generate Trip: ${input.destination}`);
+        const responseText = await this.postGenerate(
+            "", // Prompt is ignored by backend for GENERATE_TRIP
+            model,
+            SYSTEM_INSTRUCTION,
+            userId,
+            'GENERATE_TRIP',
+            `Generate Trip: ${input.destination}`,
+            input // Pass the raw input
+        );
         return this.parseJsonFromResponse(responseText, true);
     }
 
@@ -88,8 +96,7 @@ export class CopilotService implements IAIService {
         currentData: TripData,
         history: Message[],
         onThought?: ((text: string) => void) | undefined,
-        userId?: string,
-        cost?: number
+        userId?: string
     ): Promise<UpdateResult> {
         const prompt = constructUpdatePrompt(currentData, history);
         const model = SERVICE_CONFIG.copilot?.models.tripUpdater || 'gpt-4o';
@@ -103,7 +110,7 @@ export class CopilotService implements IAIService {
                 model,
                 systemInstruction: SYSTEM_INSTRUCTION,
                 userId,
-                cost,
+                action: 'CHAT_UPDATE',
                 description: `Update Trip: ${history[history.length - 1]?.text.substring(0, 20)}...`
             })
         });
@@ -156,20 +163,7 @@ export class CopilotService implements IAIService {
 
                                 if (delimiterIndex !== -1) {
                                     isJsonMode = true;
-                                    // The part of 'text' that belongs to thought
-                                    // Calculate how much of 'text' is before the delimiter
-                                    // fullText = [Prev][NewPart]...
-                                    // Delimiter is at index X.
-                                    // We need to typewrite the portion of 'text' that completes the thought.
-                                    // Easiest way: typewrite EVERYTHING up to delimiter, but displayedText tracks it.
-                                    // Actually, just typewrite the new text until the delimiter cut-off.
-
                                     const thoughtEndIndex = delimiterIndex;
-                                    const currentLength = fullText.length - text.length;
-                                    // If delimiter started in previous chunk, logic is tricky. 
-                                    // Simplified: Just typewrite 'text' IF it's part of thought.
-
-                                    // Robust way:
                                     const fullThought = fullText.substring(0, delimiterIndex);
                                     const newThoughtPart = fullThought.substring(displayedText.length);
 
@@ -218,13 +212,12 @@ export class CopilotService implements IAIService {
         interests: string,
         category?: "attraction" | "food",
         excludeNames?: string[],
-        userId?: string,
-        cost?: number
+        userId?: string
     ): Promise<AttractionRecommendation[]> {
         const prompt = constructRecommendationPrompt(location, interests, category || 'attraction', excludeNames || []);
         const model = SERVICE_CONFIG.copilot?.models.recommender || 'gpt-4o';
 
-        const responseText = await this.postGenerate(prompt, model, undefined, userId, cost, `Recommendations: ${location} (${category})`);
+        const responseText = await this.postGenerate(prompt, model, undefined, userId, 'GET_RECOMMENDATIONS', `Recommendations: ${location} (${category})`);
 
         try {
             const firstBracket = responseText.indexOf('[');
@@ -248,7 +241,7 @@ export class CopilotService implements IAIService {
         const prompt = constructFeasibilityPrompt(currentData, modificationContext);
         const model = SERVICE_CONFIG.copilot?.models.recommender || 'gpt-4o';
 
-        const responseText = await this.postGenerate(prompt, model, undefined, userId, 0, `Feasibility Check`);
+        const responseText = await this.postGenerate(prompt, model, undefined, userId, 'CHECK_FEASIBILITY', `Feasibility Check`);
 
         try {
             return this.parseJsonFromResponse(responseText, false);

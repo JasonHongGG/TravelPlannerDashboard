@@ -3,6 +3,9 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { CopilotClient } from "@github/copilot-sdk";
+import { COSTS, PointAction, calculateCost } from './config/costs';
+import { constructTripPrompt, SYSTEM_INSTRUCTION } from './config/aiConfig';
+import { TripInput } from './types';
 
 const app = express();
 const port = 3001;
@@ -13,7 +16,11 @@ app.use(express.json());
 // Request logging middleware
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Body:', JSON.stringify(req.body).substring(0, 200) + '...');
+    // Log simplified body to avoid massive logs but show action
+    const logBody = { ...req.body };
+    if (logBody.tripInput) logBody.tripInput = "[TripInput Object]";
+    if (logBody.prompt) logBody.prompt = logBody.prompt.substring(0, 50) + "...";
+    console.log('Body:', JSON.stringify(logBody));
     next();
 });
 
@@ -24,37 +31,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize Copilot Client
-// We add node_modules/.bin to PATH so that the SDK can find the copilot executable
 const binPath = path.join(process.cwd(), 'node_modules', '.bin');
 const env = { ...process.env, PATH: `${binPath}${path.delimiter}${process.env.PATH}` };
-
-// On Windows, we must explicitly use .cmd if spawning without shell (which SDK likely does)
-// BUT since we are running with 'node' executable directly, we must point to the JS file, NOT the .cmd shim.
 const copilotScript = path.join(process.cwd(), 'node_modules', '@github', 'copilot', 'index.js');
 
 const client = new CopilotClient({
     cliPath: process.execPath,
     cliArgs: [copilotScript, '--allow-all'],
-    logLevel: 'debug', // Enable debug logging
+    logLevel: 'debug',
 });
 
-// Update global PATH for this process
 process.env.PATH = `${binPath}${path.delimiter}${process.env.PATH}`;
 
 if (process.env.GITHUB_TOKEN) {
     console.log('[Auth] GITHUB_TOKEN detected in environment.');
 } else {
-    console.warn('[Auth] WARNING: GITHUB_TOKEN not found in environment. Authentication may fail unless "gh auth login" has been run.');
+    console.warn('[Auth] WARNING: GITHUB_TOKEN not found in environment.');
 }
 
-// Ensure client is started.
 client.start()
-    .then(() => console.log(`[Copilot] Client started successfully using script: ${copilotScript}`))
+    .then(() => console.log(`[Copilot] Client started successfully.`))
     .catch(err => console.error(`[Copilot] Failed to start client:`, err));
 
-// Helper to deduct points
+// Helper to deduct points based on ACTION and Cost
 async function deductPoints(userId: string, cost: number, description: string): Promise<boolean> {
-    if (!userId || cost <= 0) return true; // No cost or user, skip
+    if (cost <= 0) return true; // Free
+
+    if (!userId) return true; // Anonymous (should restrict?)
 
     try {
         const response = await fetch(`http://localhost:3002/users/${userId}/transaction`, {
@@ -84,13 +87,39 @@ async function deductPoints(userId: string, cost: number, description: string): 
 
 app.post('/generate', async (req, res) => {
     try {
-        const { prompt, model, systemInstruction, userId, cost, description } = req.body;
+        const { prompt, model, systemInstruction, userId, action, description, tripInput } = req.body;
 
-        console.log(`[Copilot] Generating content for ${userId || 'anon'}. Cost: ${cost || 0}`);
+        console.log(`[Copilot] Request from ${userId || 'anon'}. Action: ${action}`);
 
-        // Server-side Point Deduction
-        if (userId && cost > 0) {
-            const success = await deductPoints(userId, cost, description || `AI Request (${model})`);
+        let finalPrompt = prompt;
+        let calculatedCost = 0;
+        let costDescription = description || `AI Request (${action})`;
+
+        // 1. Determine Cost and Prompt based on Action
+        if (action === 'GENERATE_TRIP') {
+            if (!tripInput) {
+                return res.status(400).json({ error: "Missing 'tripInput' for GENERATE_TRIP action." });
+            }
+            // Securely calculate cost based on input days
+            calculatedCost = calculateCost(action, { dateRange: tripInput.dateRange });
+
+            // Securely construct prompt on server
+            finalPrompt = constructTripPrompt(tripInput);
+            costDescription = `Generate Trip: ${tripInput.destination} (${tripInput.dateRange})`;
+
+            console.log(`[Security] Generated secure prompt for ${tripInput.destination}. Cost: ${calculatedCost}`);
+        } else {
+            // Legacy or other actions (e.g. Chat Update, Feasibility)
+            // For these, we currently trust the prompt but enforce action cost
+            if (!action || !COSTS[action as PointAction]) {
+                return res.status(400).json({ error: "Invalid or missing 'action' parameter." });
+            }
+            calculatedCost = calculateCost(action);
+        }
+
+        // 2. Transact
+        if (userId) {
+            const success = await deductPoints(userId, calculatedCost, costDescription);
             if (!success) {
                 return res.status(403).json({ error: "Insufficient points or transaction failed." });
             }
@@ -102,12 +131,6 @@ app.post('/generate', async (req, res) => {
             model: model,
             systemMessage: systemInstruction ? { content: systemInstruction } : undefined
         });
-
-        // Simple non-streaming implementation for now to match interface expectations, 
-        // or we can stream if we want to be fancy. The frontend expects a promise that resolves to full text for generateTrip,
-        // but updateTrip expects streaming/partial updates. 
-        // For simplicity in this v1, we will buffer the response server-side and send it back.
-        // TODO: Implement proper SSE for updates if needed.
 
         let fullContent = "";
 
@@ -123,7 +146,7 @@ app.post('/generate', async (req, res) => {
                 }
             });
 
-            session.send({ prompt }).catch(err => {
+            session.send({ prompt: finalPrompt }).catch(err => {
                 unsubscribe();
                 reject(err);
             });
@@ -141,11 +164,17 @@ app.post('/generate', async (req, res) => {
 // Endpoint for streaming updates (used by updateTrip) - using SSE
 app.post('/stream-update', async (req, res) => {
     try {
-        const { prompt, model, systemInstruction, userId, cost, description } = req.body;
+        const { prompt, model, systemInstruction, userId, action, description } = req.body;
 
         // Server-side Point Deduction
-        if (userId && cost > 0) {
-            const success = await deductPoints(userId, cost, description || `AI Request (${model})`);
+        if (userId) {
+            if (!action || !COSTS[action as PointAction]) {
+                res.status(400).json({ error: "Invalid or missing 'action' parameter." });
+                return;
+            }
+            // Updates usually have fixed cost
+            const cost = calculateCost(action);
+            const success = await deductPoints(userId, cost, description || `AI Request (${action})`);
             if (!success) {
                 res.status(403).json({ error: "Insufficient points or transaction failed." });
                 return;

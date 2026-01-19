@@ -47,8 +47,8 @@ export const useTripManager = () => {
     setTrips(prev => [newTrip, ...prev]);
 
     // Trigger AI Generation
-    // SECURITY: We pass user.email and cost to backend. Backend executes deduction.
-    aiService.generateTrip(input, user?.email, cost)
+    // SECURITY: We pass user.email to backend. Backend executes deduction based on ACTION.
+    aiService.generateTrip(input, user?.email)
       .then((data) => {
         // Success implies deduction was successful on server side
         setTrips(prev => prev.map(t =>
