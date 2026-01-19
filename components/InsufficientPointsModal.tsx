@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, ArrowRight, Zap, BatteryWarning } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     isOpen: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function InsufficientPointsModal({ isOpen, onClose, requiredPoints, currentPoints, onPurchaseClick }: Props) {
+    const { t } = useTranslation();
     if (!isOpen) return null;
 
     const missingPoints = requiredPoints - currentPoints;
@@ -46,26 +48,25 @@ export default function InsufficientPointsModal({ isOpen, onClose, requiredPoint
                     </div>
 
                     <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">
-                        能量不足
+                        {t('insufficient_points.title')}
                     </h3>
 
-                    <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-[280px] font-medium">
-                        生成此行程需要更多點數，<br />
-                        立即補充以繼續您的探索旅程。
+                    <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-[280px] font-medium whitespace-pre-line">
+                        {t('insufficient_points.desc')}
                     </p>
 
                     {/* Status Card */}
                     <div className="w-full bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-8 grid grid-cols-3 divide-x divide-gray-200 shadow-inner">
                         <div className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">持有</span>
+                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider text-nowrap">{t('insufficient_points.current')}</span>
                             <span className="text-xl font-black text-gray-700 font-mono">{currentPoints}</span>
                         </div>
                         <div className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">需要</span>
+                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider text-nowrap">{t('insufficient_points.required')}</span>
                             <span className="text-xl font-black text-gray-900 font-mono">{requiredPoints}</span>
                         </div>
                         <div className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] uppercase font-bold text-red-500 tracking-wider">不足</span>
+                            <span className="text-[10px] uppercase font-bold text-red-500 tracking-wider text-nowrap">{t('insufficient_points.missing')}</span>
                             <span className="text-xl font-black text-red-500 font-mono">-{missingPoints}</span>
                         </div>
                     </div>
@@ -78,7 +79,7 @@ export default function InsufficientPointsModal({ isOpen, onClose, requiredPoint
                         }}
                         className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold shadow-lg shadow-brand-200 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group"
                     >
-                        <span>前往儲值中心</span>
+                        <span>{t('insufficient_points.go_to_store')}</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
 
@@ -87,7 +88,7 @@ export default function InsufficientPointsModal({ isOpen, onClose, requiredPoint
                         onClick={onClose}
                         className="mt-5 text-xs font-bold text-gray-400 hover:text-gray-700 transition-colors py-2"
                     >
-                        稍後再說
+                        {t('insufficient_points.later')}
                     </button>
                 </div>
 

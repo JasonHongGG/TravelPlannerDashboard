@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Bot, X, Send, Sparkles, User, Loader2, Maximize2, Minimize2, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Message } from '../types';
 import { safeRender } from '../utils/formatters';
 import { usePoints } from '../context/PointsContext';
@@ -24,9 +25,10 @@ const MarkdownComponents = {
 };
 
 export default function Assistant({ onUpdate, isGenerating: parentIsGenerating = false }: NewProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: '嗨！我是您的 AI 旅遊助理。想要調整行程、尋找餐廳，或是有任何旅行問題，都可以問我喔！', timestamp: Date.now() }
+    { role: 'model', text: '嗨！我是您的 AI 旅遊助理。想要調整行程、尋找餐廳，或是有任何旅行問題，都可以問我喔！', timestamp: Date.now() } // TODO: i18n for this
   ]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -82,7 +84,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
       console.error(error);
       setMessages(prev => [...prev, {
         role: 'model',
-        text: '抱歉，我現在有點累，請稍後再試。',
+        text: '抱歉，我現在有點累，請稍後再試。', // TODO: i18n
         timestamp: Date.now()
       }]);
     } finally {
@@ -126,10 +128,10 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
             <Bot className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">AI 旅遊顧問</h3>
+            <h3 className="font-bold text-lg">{t('assistant.title')}</h3>
             <p className="text-white/80 text-xs flex items-center gap-1">
               <Sparkles className="w-3 h-3" />
-              {isThinking ? '正在思考中...' : '隨時為您服務'}
+              {isThinking ? t('assistant.thinking') : t('assistant.subtitle')}
             </p>
           </div>
         </div>
@@ -159,16 +161,16 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
               <Lock className="w-5 h-5 text-gray-400" />
             </div>
           </div>
-          <h3 className="text-2xl font-black text-gray-900 mb-2">解鎖您的專屬助理</h3>
+          <h3 className="text-2xl font-black text-gray-900 mb-2">{t('assistant.locked_title')}</h3>
           <p className="text-gray-500 mb-8 max-w-xs leading-relaxed">
-            升級成為 <span className="font-bold text-brand-600">旅遊貼身助理</span> 會員，即可享有無限次 AI 行程調整與即時諮詢服務。
+            {t('assistant.locked_desc')}
           </p>
           <button
             onClick={openPurchaseModal}
             className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-200 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles className="w-5 h-5" />
-            查看升級方案
+            {t('assistant.upgrade_btn')}
           </button>
         </div>
       ) : (
@@ -236,7 +238,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
                       <div className="absolute inset-0 bg-brand-400 rounded-full animate-ping opacity-20 duration-1000"></div>
                       <Sparkles className="relative z-10 w-4 h-4 text-brand-500 animate-pulse duration-1000" />
                     </div>
-                    <span className="text-sm font-medium text-gray-500">正在為您規劃行程</span>
+                    <span className="text-sm font-medium text-gray-500">{t('assistant.planning')}</span>
                   </div>
                 ) : (
                   // State 2: STREAMING (Full Bubble)
@@ -262,7 +264,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="輸入訊息..."
+                placeholder={t('assistant.placeholder')}
                 disabled={isThinking}
                 className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none resize-none h-[52px] max-h-32 min-h-[52px] [&::-webkit-scrollbar]:hidden"
               />
@@ -277,7 +279,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
             <div className="text-center mt-2">
               <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                AI 可能會產生不準確的資訊，請以實際情況為準
+                {t('assistant.disclaimer')}
               </p>
             </div>
           </div>

@@ -3,8 +3,10 @@ import { LogOut, User, Coins, History, ChevronDown, ChevronUp, CreditCard, Spark
 import { useAuth } from '../context/AuthContext';
 import { usePoints } from '../context/PointsContext';
 import TransactionHistoryModal from './TransactionHistoryModal';
+import { useTranslation } from 'react-i18next';
 
 export default function UserProfileMenu() {
+    const { t, i18n } = useTranslation();
     const { user, logout } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export default function UserProfileMenu() {
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="text-xs font-medium text-gray-400">
-                                        {isSubscribed ? '目前方案' : '現有點數'}
+                                        {isSubscribed ? t('profile.current_plan') : t('profile.current_points')}
                                     </span>
                                     <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                                         {isSubscribed ? <Sparkles className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" /> : <Coins className="w-4 h-4 text-yellow-400" />}
@@ -101,7 +103,7 @@ export default function UserProfileMenu() {
                                 <div className="flex items-baseline gap-1 mb-4">
                                     {isSubscribed ? (
                                         <span className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-200 to-amber-400">
-                                            PRO 會員
+                                            {t('profile.pro_member')}
                                         </span>
                                     ) : (
                                         <>
@@ -119,7 +121,7 @@ export default function UserProfileMenu() {
                                     className="w-full py-2 bg-white text-gray-900 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <CreditCard className="w-3 h-3" />
-                                    儲值點數
+                                    {t('profile.top_up')}
                                 </button>
                             </div>
                         </div>
@@ -137,10 +139,31 @@ export default function UserProfileMenu() {
                                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition-colors">
                                         <History className="w-4 h-4" />
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700">消費紀錄</span>
+                                    <span className="text-sm font-medium text-gray-700">{t('profile.history')}</span>
                                 </div>
                                 <ChevronDown className="w-4 h-4 text-gray-300 -rotate-90" />
                             </button>
+
+                            <div className="border-t border-gray-100 my-2"></div>
+
+                            {/* Language Switcher */}
+                            <div className="px-3 py-2">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">{t('profile.language')}</label>
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    <button
+                                        onClick={() => i18n.changeLanguage('zh-TW')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${i18n.language === 'zh-TW' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        繁中
+                                    </button>
+                                    <button
+                                        onClick={() => i18n.changeLanguage('en-US')}
+                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${i18n.language === 'en-US' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        EN
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="border-t border-gray-100 my-2"></div>
 
@@ -149,7 +172,7 @@ export default function UserProfileMenu() {
                                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 hover:text-red-600 text-gray-500 transition-colors"
                             >
                                 <LogOut className="w-4 h-4" />
-                                <span className="text-sm font-medium">登出帳號</span>
+                                <span className="text-sm font-medium">{t('profile.logout')}</span>
                             </button>
                         </div>
                     </div>

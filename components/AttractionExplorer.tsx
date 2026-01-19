@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Sparkles, Plus, Minus, X, Loader2, Check, MapPin, Clock, Map as MapIcon, Utensils, Mountain, Lock, Trash2, RotateCcw, List, Ban, Layers, ChevronDown, ArrowDownCircle, Coins, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { AttractionRecommendation, TripStop } from '../types';
 import { aiService } from '../services';
 import { getStopIcon } from '../utils/icons';
@@ -36,6 +37,7 @@ export default function AttractionExplorer({
     onConfirm,
     mode = 'modification' // Default to modification for backward compatibility
 }: Props) {
+    const { t } = useTranslation();
     const [location, setLocation] = useState(initialLocation);
     const [lastSearchLocation, setLastSearchLocation] = useState(initialLocation);
 
@@ -338,17 +340,17 @@ export default function AttractionExplorer({
                             </div>
                             <h3 className="text-xl font-bold relative z-10 flex items-center gap-2">
                                 <Sparkles className="w-5 h-5" />
-                                開啟 AI 探索
+                                {t('explorer.open_title')}
                             </h3>
                             <p className="text-brand-100 text-sm mt-1 relative z-10">
-                                AI 將為您深入分析並推薦最佳{searchConfirmation.targetTab === 'food' ? '美食' : '景點'}
+                                {t('explorer.open_desc', { target: searchConfirmation.targetTab === 'food' ? t('explorer.target_food') : t('explorer.target_attraction') })}
                             </p>
                         </div>
 
                         {/* Content */}
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <div className="text-gray-500 text-sm">搜尋目標</div>
+                                <div className="text-gray-500 text-sm">{t('explorer.search_target')}</div>
                                 <div className="font-bold text-gray-900 flex items-center gap-2">
                                     <MapPin className="w-4 h-4 text-brand-500" />
                                     {searchConfirmation.query}
@@ -357,22 +359,22 @@ export default function AttractionExplorer({
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-500">單次搜尋費用</span>
+                                    <span className="text-gray-500">{t('explorer.search_cost')}</span>
                                     <span className="font-medium">{ATTRACTION_SEARCH_COST} 點</span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-500">預測探索隊列</span>
-                                    <span className="font-medium">x {QUEUE_SIZE} 組</span>
+                                    <span className="text-gray-500">{t('explorer.queue_size')}</span>
+                                    <span className="font-medium">{t('explorer.queue_unit', { count: QUEUE_SIZE })}</span>
                                 </div>
                                 <div className="h-px bg-gray-100 my-2"></div>
                                 <div className="flex items-center justify-between">
-                                    <span className="font-bold text-gray-900">總計花費</span>
+                                    <span className="font-bold text-gray-900">{t('explorer.total_cost')}</span>
                                     <span className="font-black text-xl text-brand-600 flex items-center gap-1">
                                         <Coins className="w-5 h-5" />
                                         {isSubscribed ? (
                                             <>
                                                 <span className="line-through text-gray-400 text-base mr-2">{searchConfirmation.totalCost}</span>
-                                                <span>會員免費</span>
+                                                <span>{t('explorer.member_free')}</span>
                                             </>
                                         ) : (
                                             searchConfirmation.totalCost
@@ -384,12 +386,12 @@ export default function AttractionExplorer({
                             {/* Balance Preview */}
                             <div className="mt-6 bg-brand-50/50 rounded-xl p-3 flex items-center justify-between text-sm">
                                 <div className="flex flex-col">
-                                    <span className="text-gray-500 text-xs">目前點數</span>
+                                    <span className="text-gray-500 text-xs">{t('explorer.current_balance')}</span>
                                     <span className="font-bold text-gray-700">{balance}</span>
                                 </div>
                                 <ArrowRight className="w-4 h-4 text-gray-400" />
                                 <div className="flex flex-col items-end">
-                                    <span className="text-gray-500 text-xs">剩餘點數</span>
+                                    <span className="text-gray-500 text-xs">{t('explorer.remaining_balance')}</span>
                                     <span className={`font-bold ${!isSubscribed && (balance - searchConfirmation.totalCost < 0) ? 'text-red-600' : 'text-brand-600'}`}>
                                         {isSubscribed ? balance : balance - searchConfirmation.totalCost}
                                     </span>
@@ -402,7 +404,7 @@ export default function AttractionExplorer({
                                     onClick={() => setSearchConfirmation(null)}
                                     className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
                                 >
-                                    取消
+                                    {t('explorer.cancel')}
                                 </button>
 
                                 {(balance < searchConfirmation.totalCost && !isSubscribed) ? (
@@ -413,7 +415,7 @@ export default function AttractionExplorer({
                                         }}
                                         className="px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
                                     >
-                                        前往儲值中心
+                                        {t('explorer.go_to_store')}
                                         <ArrowRight className="w-4 h-4" />
                                     </button>
                                 ) : (
@@ -421,7 +423,7 @@ export default function AttractionExplorer({
                                         onClick={executeConfirmedSearch}
                                         className="px-4 py-2.5 rounded-xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-2"
                                     >
-                                        確認支付
+                                        {t('explorer.confirm_pay')}
                                         <ArrowRight className="w-4 h-4" />
                                     </button>
                                 )}
@@ -440,7 +442,7 @@ export default function AttractionExplorer({
                         <div>
                             <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
                                 <Sparkles className="w-5 h-5 text-brand-500 fill-brand-500" />
-                                {mode === 'planning' ? 'AI 景點探索助手' : 'AI 景點探索與行程調整'}
+                                {mode === 'planning' ? t('explorer.title_planning') : t('explorer.title_modification')}
                             </h2>
                         </div>
 
@@ -452,7 +454,7 @@ export default function AttractionExplorer({
                                     onChange={(e) => setLocation(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch(true)}
                                     className="pl-9 pr-4 py-2 bg-gray-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-500 w-full md:w-64"
-                                    placeholder="輸入目的地..."
+                                    placeholder={t('explorer.search_placeholder')}
                                 />
                                 <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                             </div>
@@ -462,7 +464,7 @@ export default function AttractionExplorer({
                                 className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-brand-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-md shadow-brand-100 whitespace-nowrap"
                             >
                                 {initialLoading && results[activeTab].length === 0 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                                搜尋
+                                {t('explorer.search_btn')}
                             </button>
                             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400">
                                 <X className="w-6 h-6" />
@@ -480,7 +482,7 @@ export default function AttractionExplorer({
                                 }`}
                         >
                             <Mountain className="w-4 h-4" />
-                            探索景點
+                            {t('explorer.tab_attraction')}
                         </button>
                         <button
                             onClick={() => handleTabChange('food')}
@@ -490,7 +492,7 @@ export default function AttractionExplorer({
                                 }`}
                         >
                             <Utensils className="w-4 h-4" />
-                            尋找美食
+                            {t('explorer.tab_food')}
                         </button>
                     </div>
                 </div>
@@ -503,7 +505,7 @@ export default function AttractionExplorer({
                         {initialLoading && currentList.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
                                 <Loader2 className="w-10 h-10 animate-spin text-brand-500" />
-                                <p className="font-bold text-sm text-gray-600">正在挖掘推薦...</p>
+                                <p className="font-bold text-sm text-gray-600">{t('explorer.loading_recommendations')}</p>
                             </div>
                         ) : currentList.length > 0 ? (
                             <>
@@ -562,7 +564,7 @@ export default function AttractionExplorer({
                                                                 }`}
                                                         >
                                                             {selections[item.name] === 'must' ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                                                            加入
+                                                            {t('explorer.add')}
                                                         </button>
                                                         <button
                                                             onClick={() => toggleSelect(item.name, 'avoid')}
@@ -607,11 +609,11 @@ export default function AttractionExplorer({
                                             {isWaitingForBuffer ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
-                                                    <span>載入中...</span>
+                                                    <span>{t('explorer.loading')}</span>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <span>載入更多</span>
+                                                    <span>{t('explorer.load_more')}</span>
                                                     <ArrowDownCircle className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
                                                 </>
                                             )}
@@ -622,7 +624,7 @@ export default function AttractionExplorer({
                                             {isPreloading && !isWaitingForBuffer && (
                                                 <>
                                                     <Loader2 className="w-3 h-3 animate-spin" />
-                                                    <span>正在預載入({preloadingBatchNumber}/2)</span>
+                                                    <span>{t('explorer.preloading', { current: preloadingBatchNumber, total: 2 })}</span>
                                                 </>
                                             )}
                                         </div>
@@ -632,7 +634,7 @@ export default function AttractionExplorer({
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-gray-400">
                                 <Search className="w-12 h-12 mb-3 opacity-10" />
-                                <p className="text-sm font-medium">輸入目的地來探索推薦景點</p>
+                                <p className="text-sm font-medium">{t('explorer.empty_search')}</p>
                             </div>
                         )}
                     </div>
@@ -644,7 +646,7 @@ export default function AttractionExplorer({
                         <div className="p-4 bg-gray-50 border-b border-gray-100">
                             <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
                                 {mode === 'modification' ? <RotateCcw className="w-4 h-4 text-brand-600" /> : <List className="w-4 h-4 text-brand-600" />}
-                                {mode === 'modification' ? '行程管理' : '已選清單'}
+                                {mode === 'modification' ? t('explorer.sidebar_mod_title') : t('explorer.sidebar_plan_title')}
                             </h3>
                         </div>
 
@@ -659,7 +661,7 @@ export default function AttractionExplorer({
                                     }`}
                             >
                                 <Check className="w-3 h-3" />
-                                必去
+                                {t('explorer.tab_must')}
                                 <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${mustCount > 0 ? 'bg-brand-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
                                     {mustCount}
                                 </span>
@@ -674,7 +676,7 @@ export default function AttractionExplorer({
                                     }`}
                             >
                                 <Ban className="w-3 h-3" />
-                                避開
+                                {t('explorer.tab_avoid')}
                                 <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${avoidCount > 0 ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
                                     {avoidCount}
                                 </span>
@@ -690,7 +692,7 @@ export default function AttractionExplorer({
                                         }`}
                                 >
                                     <Layers className="w-3 h-3" />
-                                    當日
+                                    {t('explorer.tab_current')}
                                     <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-500">
                                         {currentCount}
                                     </span>
@@ -706,7 +708,7 @@ export default function AttractionExplorer({
                                     {mustCount === 0 && (
                                         <div className="text-center py-10 text-gray-400 text-xs flex flex-col items-center">
                                             <Sparkles className="w-8 h-8 mb-2 opacity-20" />
-                                            尚未選擇必去景點
+                                            {t('explorer.empty_must')}
                                         </div>
                                     )}
                                     {Object.entries(selections).map(([name, type]) => {
@@ -734,7 +736,7 @@ export default function AttractionExplorer({
                                     {avoidCount === 0 && (
                                         <div className="text-center py-10 text-gray-400 text-xs flex flex-col items-center">
                                             <Ban className="w-8 h-8 mb-2 opacity-20" />
-                                            尚未選擇避開項目
+                                            {t('explorer.empty_avoid')}
                                         </div>
                                     )}
                                     {Object.entries(selections).map(([name, type]) => {
@@ -760,7 +762,7 @@ export default function AttractionExplorer({
                             {activeSidebarTab === 'current' && mode === 'modification' && (
                                 <div className="space-y-3">
                                     <div className="mb-2 p-2 bg-blue-50 text-blue-800 text-[10px] rounded-lg border border-blue-100">
-                                        提示：勾選「保留」以鎖定行程，勾選「移除」則刪除。未勾選者為「彈性」，AI 可視情況替換。
+                                        {t('explorer.hint_mod')}
                                     </div>
                                     {currentStops.map((stop, i) => {
                                         const StopIcon = getStopIcon(stop);
@@ -784,14 +786,14 @@ export default function AttractionExplorer({
                                                     <button
                                                         onClick={() => toggleStopStatus(stop.name, 'keep')}
                                                         className={`p-1.5 rounded-lg transition-colors ${status === 'keep' ? 'bg-green-500 text-white' : 'text-gray-300 hover:text-green-500 hover:bg-green-50'}`}
-                                                        title="必須保留"
+                                                        title={t('explorer.tooltip_keep')}
                                                     >
                                                         <Lock className="w-3.5 h-3.5" />
                                                     </button>
                                                     <button
                                                         onClick={() => toggleStopStatus(stop.name, 'remove')}
                                                         className={`p-1.5 rounded-lg transition-colors ${status === 'remove' ? 'bg-red-500 text-white' : 'text-gray-300 hover:text-red-500 hover:bg-red-50'}`}
-                                                        title="必須移除"
+                                                        title={t('explorer.tooltip_remove')}
                                                     >
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -801,7 +803,7 @@ export default function AttractionExplorer({
                                     })}
                                     {currentStops.length === 0 && (
                                         <div className="text-center py-8 text-gray-400 text-xs">
-                                            當天尚無行程
+                                            {t('explorer.empty_current_day')}
                                         </div>
                                     )}
                                 </div>
@@ -816,7 +818,7 @@ export default function AttractionExplorer({
                                 className="w-full bg-brand-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-brand-100 transition-all flex items-center justify-center gap-2"
                             >
                                 {mode === 'planning' ? <Plus className="w-4 h-4" /> : <Sparkles className="w-4 h-4 text-yellow-300" />}
-                                {mode === 'planning' ? '加入到需求清單' : 'AI 重新規劃行程'}
+                                {mode === 'planning' ? t('explorer.add_to_list') : t('explorer.replan')}
                             </button>
                         </div>
                     </div>

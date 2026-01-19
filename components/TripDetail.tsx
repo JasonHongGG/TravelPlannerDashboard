@@ -8,6 +8,7 @@ import { safeRender } from '../utils/formatters';
 import { getDayMapConfig } from '../utils/mapHelpers';
 import { getTripCover } from '../utils/tripUtils';
 import { constructExplorerUpdatePrompt } from '../config/aiConfig';
+import { useTranslation } from 'react-i18next';
 
 // Sub-components
 import DaySelector from './trip/DaySelector';
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMeta }: Props) {
+  const { t } = useTranslation();
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'budget' | 'risks'>('itinerary');
   const [isMapOpen, setIsMapOpen] = useState(true); // State to toggle map visibility
@@ -225,7 +227,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
         }
       } catch (e) {
         console.error("Failed to update trip from explorer", e);
-        alert("更新行程時發生錯誤，請稍後再試。");
+        alert(t('trip.error_update') || "更新行程時發生錯誤，請稍後再試。");
       } finally {
         setIsUpdatingFromExplorer(false);
       }
@@ -242,12 +244,12 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
         <div className="bg-red-100 p-4 rounded-full mb-4">
           <AlertTriangle className="w-12 h-12 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">行程生成失敗</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('trip.error_title')}</h2>
         <p className="text-gray-600 max-w-md mb-8">
-          {trip.errorMsg || "無法為您生成行程，請稍後再試。"}
+          {trip.errorMsg || t('trip.error_desc')}
         </p>
         <button onClick={onBack} className="px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-          返回主控台
+          {t('trip.back_to_dashboard')}
         </button>
       </div>
     );
@@ -258,8 +260,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-500 mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-700">正在為您規劃夢想旅程...</h2>
-        <button onClick={onBack} className="mt-8 text-brand-600 hover:underline">取消</button>
+        <h2 className="text-xl font-semibold text-gray-700">{t('trip.generating')}</h2>
+        <button onClick={onBack} className="mt-8 text-brand-600 hover:underline">{t('common.cancel')}</button>
       </div>
     );
   }
@@ -282,7 +284,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
 
     // Validate size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert("圖片大小請小於 2MB");
+      alert("圖片大小請小於 2MB"); // TODO: i18n
       return;
     }
 
@@ -353,12 +355,12 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
               </div>
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {isCheckingFeasibility ? "正在評估行程可行性" : "正在為您重塑行程"}
+              {isCheckingFeasibility ? t('trip.checking_feasibility') : t('trip.reshaping')}
             </h3>
             <p className="text-gray-500 text-sm">
               {isCheckingFeasibility
-                ? "AI 正在檢查路線順暢度與時間安排..."
-                : "AI 正在根據您選擇的景點，重新計算最佳路線與時間安排..."
+                ? t('trip.check_desc')
+                : t('trip.reshape_desc')
               }
             </p>
           </div>
@@ -369,7 +371,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       <header className="bg-white border-b border-gray-200 h-16 flex-none z-50 flex items-center justify-between px-6 shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="text-gray-500 hover:text-gray-900 font-medium text-sm flex items-center gap-1">
-            ← 返回
+            ← {t('common.back')}
           </button>
           <div className="h-6 w-px bg-gray-300 mx-2 hidden md:block"></div>
           <h1 className="text-lg font-bold text-gray-800 truncate max-w-md hidden md:block">
@@ -378,7 +380,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> 準備就緒
+            <CheckCircle2 className="w-3 h-3" /> {t('trip.ready') || "Ready"}
           </div>
         </div>
       </header>
@@ -421,7 +423,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                 <button
                   onClick={handleResetCover}
                   className="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-black/20 hover:bg-red-500/80 text-white/90 hover:text-white rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 shadow-sm"
-                  title="恢復預設封面"
+                  title={t('trip_detail.cover.reset')}
                 >
                   <span className="sr-only">重置</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -432,7 +434,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
               <button
                 onClick={handleRandomizeCover}
                 className="group/random flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-black/20 hover:bg-brand-500/80 text-white/90 hover:text-white rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 shadow-sm"
-                title="隨機封面"
+                title={t('trip_detail.cover.random')}
               >
                 <Shuffle className="w-4 h-4 group-hover/random:rotate-180 transition-transform duration-500" />
               </button>
@@ -457,7 +459,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                   ${!isUploading && 'group-hover/btn:max-w-xs group-hover/btn:opacity-100 group-hover/btn:pr-3'}
                   ${isUploading && 'max-w-xs opacity-100 pr-3'}
                 `}>
-                  {isUploading ? '上傳中...' : '更換封面'}
+                  {isUploading ? t('trip_detail.cover.uploading') : t('trip_detail.cover.change')}
                 </span>
               </button>
             </div>
@@ -467,7 +469,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
               <div className="flex items-center gap-3 text-sm font-medium text-white/90">
                 <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {tripMeta.dateRange || trip.input.dateRange}</span>
                 <span>•</span>
-                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {tripMeta.days || days.length} 天</span>
+                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {tripMeta.days || days.length} {t('trip.days')}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> {trip.input.budget || '~'}</span>
               </div>
@@ -481,19 +483,19 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                 onClick={() => setActiveTab('itinerary')}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'itinerary' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
-                行程表
+                {t('trip_detail.tabs.itinerary')}
               </button>
               <button
                 onClick={() => setActiveTab('budget')}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'budget' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
-                預算預估
+                {t('trip_detail.tabs.budget')}
               </button>
               <button
                 onClick={() => setActiveTab('risks')}
                 className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'risks' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
-                風險提示
+                {t('trip_detail.tabs.risks')}
               </button>
             </div>
 
@@ -505,10 +507,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                   ? 'bg-brand-50 text-brand-600 border-brand-200 shadow-inner'
                   : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
                   }`}
-                title={isMapOpen ? "隱藏地圖" : "顯示地圖"}
+                title={isMapOpen ? t('trip_detail.map.hide') : t('trip_detail.map.show')}
               >
                 {isMapOpen ? <PanelRightClose className="w-4 h-4" /> : <MapIcon className="w-4 h-4" />}
-                {isMapOpen ? "收起地圖" : "地圖模式"}
+                {isMapOpen ? t('trip_detail.map.hide') : t('trip_detail.map.mode')}
               </button>
             </div>
           </div>
@@ -545,7 +547,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
               <div className="p-6">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <AlertTriangle className="text-orange-500" /> 潛在風險與建議
+                    <AlertTriangle className="text-orange-500" /> {t('trip.risks_title')}
                   </h3>
                   <ul className="space-y-3">
                     {risks.map((risk, idx) => (

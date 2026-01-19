@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DateRangePickerProps {
     startDate: Date | null;
@@ -9,9 +10,9 @@ interface DateRangePickerProps {
     onClose: () => void;
 }
 
-const MONTH_NAMES = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-
 export default function DateRangePicker({ startDate, endDate, onChange, onClose }: DateRangePickerProps) {
+    const { t, i18n } = useTranslation();
+
     // Determine initial view month
     const [currentMonth, setCurrentMonth] = useState(() => {
         return startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), 1) : new Date();
@@ -131,6 +132,12 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
         ? Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)) + 1
         : 0;
 
+    // Generate weekdays based on locale (starts Sunday)
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(2023, 0, i + 1); // 2023-01-01 is Sunday
+        return d.toLocaleString(i18n.language, { weekday: 'short' });
+    });
+
     return ReactDOM.createPortal(
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
             {/* Backdrop */}
@@ -151,7 +158,7 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
                             <ChevronLeft className="w-5 h-5" />
                         </button>
                         <span className="text-xl font-black text-gray-900 tracking-tight">
-                            {currentMonth.getFullYear()}年 {MONTH_NAMES[currentMonth.getMonth()]}
+                            {currentMonth.toLocaleString(i18n.language, { year: 'numeric', month: 'long' })}
                         </span>
                         <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="p-2 hover:bg-white rounded-full text-gray-500 hover:text-gray-900 hover:shadow-sm transition-all">
                             <ChevronRight className="w-5 h-5" />
@@ -160,7 +167,7 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
 
                     {/* Weekdays */}
                     <div className="grid grid-cols-7 mb-3 text-center">
-                        {['日', '一', '二', '三', '四', '五', '六'].map(day => (
+                        {weekDays.map(day => (
                             <span key={day} className="text-xs font-bold text-gray-400 uppercase tracking-wider h-8 flex items-center justify-center">
                                 {day}
                             </span>
@@ -175,16 +182,16 @@ export default function DateRangePicker({ startDate, endDate, onChange, onClose 
                     {/* Footer */}
                     <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between">
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">已選擇</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('calendar.selected')}</span>
                             <span className="text-sm font-bold text-brand-600">
-                                {startDate && endDate ? `${daysCount} 天` : '請選擇日期'}
+                                {startDate && endDate ? t('calendar.days', { count: daysCount }) : t('calendar.select_date')}
                             </span>
                         </div>
                         <button
                             onClick={(e) => { e.preventDefault(); onClose(); }}
                             className="px-6 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 hover:shadow-lg transition-all"
                         >
-                            完成
+                            {t('calendar.confirm')}
                         </button>
                     </div>
                 </div>

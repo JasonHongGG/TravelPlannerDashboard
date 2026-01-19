@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { X, Calendar, TrendingUp, TrendingDown, History, CircleDollarSign, Sparkles } from 'lucide-react';
 import { usePoints } from '../context/PointsContext';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     isOpen: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
+    const { t, i18n } = useTranslation();
     const { transactions } = usePoints();
 
     if (!isOpen) return null;
@@ -21,11 +23,11 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
         const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) {
-            return `今天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            return `${t('history.today')} ${date.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}`;
         } else if (diffDays === 1) {
-            return `昨天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            return `${t('history.yesterday')} ${date.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}`;
         } else {
-            return date.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            return date.toLocaleDateString(i18n.language, { year: 'numeric', month: '2-digit', day: '2-digit' });
         }
     };
 
@@ -44,8 +46,8 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
                                 <History className="w-6 h-6 text-brand-600" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-gray-900">交易歷史紀錄</h2>
-                                <p className="text-sm text-gray-500 font-medium">查看您的點數變動明細</p>
+                                <h2 className="text-xl font-black text-gray-900">{t('history.title')}</h2>
+                                <p className="text-sm text-gray-500 font-medium">{t('history.subtitle')}</p>
                             </div>
                         </div>
                         <button
@@ -64,9 +66,9 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
                             <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 border border-gray-100">
                                 <CircleDollarSign className="w-10 h-10 text-gray-300" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">尚無交易紀錄</h3>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">{t('history.empty_title')}</h3>
                             <p className="text-gray-500 max-w-xs text-sm">
-                                您目前的帳戶尚未有任何點數變動。開始規畫您的第一趟旅程吧！
+                                {t('history.empty_desc')}
                             </p>
                         </div>
                     ) : (
@@ -91,7 +93,7 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
 
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-gray-900 text-sm flex items-center gap-2">
-                                                        {tx.description || '啟用訂閱會員'}
+                                                        {tx.description || t('history.subscription_activation')}
                                                         <span className="px-2 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] rounded-full">Pro</span>
                                                     </span>
                                                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
@@ -103,10 +105,10 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
 
                                             <div className="text-right z-10">
                                                 <div className="text-sm font-bold text-indigo-600 flex items-center justify-end gap-1">
-                                                    會員權益已生效
+                                                    {t('history.subscription_active')}
                                                 </div>
                                                 <div className="text-[10px] text-gray-400">
-                                                    30 天無限生成
+                                                    {t('history.subscription_details')}
                                                 </div>
                                             </div>
                                         </div>
@@ -151,7 +153,7 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
                             })}
 
                             <div className="text-center pt-8 pb-4">
-                                <span className="text-[10px] text-gray-300 tracking-widest uppercase">End of History</span>
+                                <span className="text-[10px] text-gray-300 tracking-widest uppercase">{t('history.end_of_history')}</span>
                             </div>
                         </div>
                     )}
@@ -159,7 +161,7 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
 
                 {/* Footer Summary */}
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
-                    <span>共 {transactions.length} 筆紀錄</span>
+                    <span>{t('history.total_records', { count: transactions.length })}</span>
                     <span className="font-mono">ID: {transactions.length > 0 ? transactions[0].id?.slice(0, 8) : '---'}...</span>
                 </div>
             </div>

@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trip } from '../types';
 import { getTripCover } from '../utils/tripUtils';
 import UserProfileMenu from './UserProfileMenu';
-import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check, RefreshCw } from 'lucide-react';
+import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check, RefreshCw, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   trips: Trip[];
@@ -36,6 +37,7 @@ const LiveTimer = ({ startTime }: { startTime: number }) => {
 // Robust Delete Button with confirmation
 const DeleteButton = ({ onDelete }: { onDelete: () => void }) => {
   const [confirming, setConfirming] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (confirming) {
@@ -61,10 +63,10 @@ const DeleteButton = ({ onDelete }: { onDelete: () => void }) => {
         ? 'bg-red-50 text-red-600 ring-1 ring-red-200 px-3'
         : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
         }`}
-      title={confirming ? "再次點擊以確認" : "刪除行程"}
+      title={confirming ? t('dashboard.confirm_delete_tooltip') : t('dashboard.delete_trip')}
     >
       <Trash2 className="w-4 h-4" />
-      {confirming && <span className="text-[10px] font-bold">確認刪除</span>}
+      {confirming && <span className="text-[10px] font-bold">{t('dashboard.confirm_delete_text')}</span>}
     </button>
   );
 };
@@ -79,6 +81,7 @@ interface TripCardProps {
 
 // New Trip Card Component
 const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport, onRetry }) => {
+  const { t } = useTranslation();
   // Generate a cover image based on destination
   const imageUrl = getTripCover(trip);
 
@@ -107,13 +110,13 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport,
           {trip.status === 'generating' && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-brand-600 backdrop-blur-md shadow-sm">
               <Loader2 className="w-3 h-3 animate-spin" />
-              生成中 <LiveTimer startTime={trip.createdAt} />
+              {t('dashboard.status_generating')} <LiveTimer startTime={trip.createdAt} />
             </span>
           )}
           {trip.status === 'complete' && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-green-600 backdrop-blur-md shadow-sm animate-in fade-in zoom-in">
               <Check className="w-3 h-3" />
-              生成完成 {trip.generationTimeMs ? (trip.generationTimeMs / 1000).toFixed(1) : 0}s
+              {t('dashboard.status_complete')} {trip.generationTimeMs ? (trip.generationTimeMs / 1000).toFixed(1) : 0}s
             </span>
           )}
           {trip.status === 'error' && (
@@ -125,7 +128,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport,
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-red-500 text-white shadow-sm hover:bg-red-600 transition-colors z-10 cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
-              生成失敗 - 點此重試
+              {t('dashboard.status_failed')}
             </button>
           )}
         </div>
@@ -168,7 +171,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport,
           <button
             onClick={onExport}
             className="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors"
-            title="匯出備份"
+            title={t('dashboard.export_backup')}
           >
             <Download className="w-4 h-4" />
           </button>
@@ -185,6 +188,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport,
 
 export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip, onImportTrip, onRetryTrip }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t, i18n } = useTranslation();
 
   const handleExport = (e: React.MouseEvent, trip: Trip) => {
     e.preventDefault();
@@ -216,12 +220,12 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
           if (json.input && json.status) {
             onImportTrip(json as Trip);
           } else {
-            alert("無效的行程檔案格式");
+            alert(t('dashboard.invalid_file'));
           }
         }
       } catch (error) {
         console.error("Failed to parse JSON", error);
-        alert("檔案讀取失敗");
+        alert(t('dashboard.read_error'));
       }
     };
     reader.readAsText(fileObj);
@@ -238,7 +242,7 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
               <div className="bg-gradient-to-tr from-brand-600 to-sky-400 p-2 rounded-xl shadow-lg shadow-brand-200">
                 <Map className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-black text-gray-800 tracking-tight">AI Travel Planner</span>
+              <span className="text-xl font-black text-gray-800 tracking-tight">{t('dashboard.app_name')}</span>
             </div>
             <div className="flex items-center gap-3">
               <UserProfileMenu />
@@ -257,7 +261,7 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
                 className="inline-flex items-center px-3 py-2 text-sm font-bold text-gray-600 hover:text-gray-900 bg-transparent hover:bg-gray-100 rounded-lg transition-all"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">匯入</span>
+                <span className="hidden sm:inline">{t('dashboard.import')}</span>
               </button>
 
               <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
@@ -267,8 +271,22 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
                 className="inline-flex items-center px-4 py-2 text-sm font-bold rounded-xl shadow-lg shadow-brand-200 text-white bg-brand-600 hover:bg-brand-700 hover:-translate-y-0.5 transition-all"
               >
                 <Plus className="w-5 h-5 mr-1" />
-                <span className="hidden sm:inline">開始規劃</span>
-                <span className="sm:hidden">新增</span>
+                <span className="hidden sm:inline">{t('dashboard.start_planning')}</span>
+                <span className="sm:hidden">{t('dashboard.new_btn_short')}</span>
+              </button>
+
+              <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
+
+              <button
+                onClick={() => i18n.changeLanguage(i18n.language === 'zh-TW' ? 'en-US' : 'zh-TW')}
+                className="p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-full transition-colors relative group"
+                title={t('profile.language')}
+              >
+                <div className="absolute inset-0 bg-current opacity-10 rounded-full scale-0 group-hover:scale-100 transition-transform" />
+                <div className="text-xs font-bold absolute -bottom-1 -right-1 bg-white border border-gray-100 rounded-[4px] px-1 leading-none shadow-sm text-gray-600 group-hover:text-brand-600 group-hover:border-brand-200">
+                  {i18n.language === 'zh-TW' ? '繁' : 'EN'}
+                </div>
+                <Globe className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -282,14 +300,14 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">
-              探索您的下一段旅程
+              {t('dashboard.hero_title')}
             </h1>
             <p className="text-gray-500 text-lg md:max-w-4xl lg:whitespace-nowrap">
-              運用 AI 為您打造量身訂製的行程，從在地美食到隱藏景點，讓每一次出發都充滿驚喜。
+              {t('dashboard.hero_desc')}
             </p>
           </div>
           <div className="text-right hidden md:block">
-            <div className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">已建立行程</div>
+            <div className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">{t('dashboard.created_trips')}</div>
             <div className="text-4xl font-black text-brand-600">{trips.length}</div>
           </div>
         </div>
@@ -309,14 +327,14 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
               <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center mb-5 group-hover:scale-110 group-hover:shadow-md group-hover:border-brand-200 transition-all duration-300">
                 <Plus className="w-8 h-8 text-gray-400 group-hover:text-brand-500 transition-colors" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-brand-600 transition-colors">規劃新行程</h3>
-              <p className="text-sm text-gray-500 px-6 leading-relaxed mb-4">
-                輸入目的地、預算與興趣，<br />
-                讓 AI 為您生成完美的旅行計畫。
-              </p>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-brand-600 transition-colors">{t('dashboard.plan_new_trip')}</h3>
+              <p
+                className="text-sm text-gray-500 px-6 leading-relaxed mb-4"
+                dangerouslySetInnerHTML={{ __html: t('dashboard.new_trip_desc').replace('\n', '<br />') }}
+              ></p>
               <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                 <Sparkles className="w-3 h-3" />
-                立即開始
+                {t('dashboard.start_now')}
               </span>
             </div>
           </button>
@@ -339,7 +357,7 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
         {trips.length === 0 && (
           <div className="mt-10 flex flex-col items-center text-center opacity-50 pointer-events-none">
             <div className="w-24 h-1 bg-gray-200 rounded-full mb-4"></div>
-            <p className="text-sm text-gray-400">目前沒有任何行程，點擊上方卡片開始建立。</p>
+            <p className="text-sm text-gray-400">{t('dashboard.no_trips')}</p>
           </div>
         )}
 

@@ -6,6 +6,7 @@ import AttractionExplorer from './AttractionExplorer';
 import { usePoints } from '../context/PointsContext';
 import { calculateTripCost } from '../utils/tripUtils';
 import DateRangePicker from './DateRangePicker';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   isOpen: boolean;
@@ -64,6 +65,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 );
 
 export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);
@@ -194,9 +196,9 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
             <div>
               <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-sky-500 mb-1 flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-brand-500 fill-brand-500" />
-                開始您的旅程
+                {t('new_trip.title')}
               </h2>
-              <p className="text-sm text-gray-500 font-medium">填寫下表，讓 AI 為您打造完美的專屬行程</p>
+              <p className="text-sm text-gray-500 font-medium">{t('new_trip.subtitle')}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -214,16 +216,16 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                 <button
                   onClick={handleImportClick}
                   className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-brand-600 hover:bg-white rounded-md transition-all shadow-sm hover:shadow"
-                  title="匯入設定檔"
+                  title={t('new_trip.import')}
                 >
-                  <Upload className="w-3.5 h-3.5 inline mr-1" /> 匯入
+                  <Upload className="w-3.5 h-3.5 inline mr-1" /> {t('new_trip.import')}
                 </button>
                 <button
                   onClick={handleExport}
                   className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-brand-600 hover:bg-white rounded-md transition-all shadow-sm hover:shadow"
-                  title="匯出設定檔"
+                  title={t('new_trip.export')}
                 >
-                  <Download className="w-3.5 h-3.5 inline mr-1" /> 匯出
+                  <Download className="w-3.5 h-3.5 inline mr-1" /> {t('new_trip.export')}
                 </button>
               </div>
 
@@ -240,14 +242,14 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
           <div className="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide bg-gray-50/30">
             <form id="new-trip-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
 
-              <SectionHeader title="基本資訊 Basic Info" />
+              <SectionHeader title={t('new_trip.basic_info')} />
 
               <InputField
-                label="目的地"
+                label={t('new_trip.destination')}
                 icon={MapPin}
                 value={formData.destination}
                 onChange={(v: string) => handleChange('destination', v)}
-                placeholder="例：日本東京"
+                placeholder={t('new_trip.destination_placeholder')}
                 required
               />
 
@@ -256,7 +258,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                   <div className="p-1 rounded-md bg-white border border-gray-200 text-gray-500 group-focus-within:bg-brand-50 group-focus-within:text-brand-600 group-focus-within:border-brand-200 transition-colors shadow-sm">
                     <Calendar className="w-3.5 h-3.5" />
                   </div>
-                  日期範圍與天數 <span className="text-red-500 text-xs font-bold">*</span>
+                  {t('new_trip.date_label')} <span className="text-red-500 text-xs font-bold">*</span>
                 </label>
 
                 <div
@@ -265,7 +267,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                     }`}
                 >
                   <span className={formData.dateRange ? 'text-gray-900' : 'text-gray-400'}>
-                    {formData.dateRange || '點擊選擇日期...'}
+                    {formData.dateRange || t('new_trip.date_placeholder')}
                   </span>
                   <Calendar className="w-4 h-4 text-gray-400" />
                 </div>
@@ -277,10 +279,10 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                     onChange={(start, end) => {
                       setDateSelection({ start, end });
                       if (start && end) {
-                        // Format: YYYY/MM/DD - YYYY/MM/DD (N 天)
+                        // Format: YYYY/MM/DD - YYYY/MM/DD (N Days)
                         const fmt = (d: Date) => `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
                         const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
-                        const str = `${fmt(start)} - ${fmt(end)} (共 ${diff} 天)`;
+                        const str = `${fmt(start)} - ${fmt(end)} ${t('new_trip.days_count', { count: diff })}`;
                         handleChange('dateRange', str);
                         if (JSON.stringify(dateSelection) !== JSON.stringify({ start, end })) {
                           setIsDatePickerOpen(false); // Close on selection completion
@@ -293,72 +295,72 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
               </div>
 
               <InputField
-                label="旅遊人數"
+                label={t('new_trip.travelers')}
                 icon={Users}
                 value={formData.travelers}
                 onChange={(v: string) => handleChange('travelers', v)}
-                placeholder="例：2 大人, 1 小孩"
+                placeholder={t('new_trip.travelers_placeholder')}
                 required
               />
 
               <InputField
-                label="預算等級"
+                label={t('new_trip.budget')}
                 icon={DollarSign}
                 value={formData.budget}
                 onChange={(v: string) => handleChange('budget', v)}
-                placeholder="例：中等預算，約台幣 6 萬"
+                placeholder={t('new_trip.budget_placeholder')}
                 required
               />
 
-              <SectionHeader title="旅行風格 Preferences" />
+              <SectionHeader title={t('new_trip.style_preferences')} />
 
               <InputField
-                label="步調"
+                label={t('new_trip.pace')}
                 icon={Clock}
                 value={formData.pace}
                 onChange={(v: string) => handleChange('pace', v)}
-                placeholder="例：輕鬆，早上 10 點出發"
+                placeholder={t('new_trip.pace_placeholder')}
                 required
               />
 
               <InputField
-                label="交通偏好"
+                label={t('new_trip.transport')}
                 icon={Train}
                 value={formData.transport}
                 onChange={(v: string) => handleChange('transport', v)}
-                placeholder="例：大眾運輸為主"
+                placeholder={t('new_trip.transport_placeholder')}
                 required
               />
 
               <div className="md:col-span-2">
                 <InputField
-                  label="住宿安排"
+                  label={t('new_trip.accommodation')}
                   icon={Home}
                   value={formData.accommodation}
                   onChange={(v: string) => handleChange('accommodation', v)}
-                  placeholder="例：住在新宿 4 晚，京都 3 晚"
+                  placeholder={t('new_trip.accommodation_placeholder')}
                   required
                 />
               </div>
 
               <div className="md:col-span-2">
                 <TextAreaField
-                  label="興趣與主題"
+                  label={t('new_trip.interests')}
                   icon={Heart}
                   value={formData.interests}
                   onChange={(v: string) => handleChange('interests', v)}
-                  placeholder="例：喜歡美食、動漫、寺廟巡禮、大自然。不喜歡人擠人。"
+                  placeholder={t('new_trip.interests_placeholder')}
                   required
                 />
               </div>
 
               <div className="md:col-span-2">
                 <TextAreaField
-                  label="必去景點 / 避開項目"
+                  label={t('new_trip.must_avoid')}
                   icon={CheckSquare}
                   value={formData.mustVisit}
                   onChange={(v: string) => handleChange('mustVisit', v)}
-                  placeholder="必去：東京鐵塔。避開：迪士尼。"
+                  placeholder={t('new_trip.must_avoid_placeholder')}
                   required
                   actionButton={
                     <button
@@ -366,32 +368,32 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                       onClick={() => setIsExplorerOpen(true)}
                       className="text-xs font-bold text-white bg-gradient-to-r from-brand-500 to-sky-500 hover:from-brand-600 hover:to-sky-600 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 border border-white/20"
                     >
-                      <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" /> AI 探索助手
+                      <Sparkles className="w-3 h-3 text-yellow-200 fill-yellow-200" /> {t('new_trip.ai_explorer')}
                     </button>
                   }
                 />
               </div>
 
-              <SectionHeader title="其他細節 Details" />
+              <SectionHeader title={t('new_trip.other_details')} />
 
               <div className="md:col-span-1">
                 <InputField
-                  label="語言"
+                  label={t('new_trip.language')}
                   icon={Languages}
                   value={formData.language}
                   onChange={(v: string) => handleChange('language', v)}
-                  placeholder="例：繁體中文"
+                  placeholder={t('new_trip.language_placeholder')}
                   required
                 />
               </div>
 
               <div className="md:col-span-1">
                 <InputField
-                  label="特殊限制"
+                  label={t('new_trip.constraints')}
                   icon={AlertCircle}
                   value={formData.constraints}
                   onChange={(v: string) => handleChange('constraints', v)}
-                  placeholder="例：過敏、班機時間..."
+                  placeholder={t('new_trip.constraints_placeholder')}
                 />
               </div>
 
@@ -402,14 +404,14 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
           <div className="px-8 py-5 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-3xl">
             <div className="flex items-center gap-4 mr-auto">
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">預估花費</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('new_trip.estimated_cost')}</span>
                 <span className="text-lg font-black text-brand-600 flex items-center gap-1">
                   {estimatedCost} <span className="text-xs font-bold text-brand-400">PTS</span>
                 </span>
               </div>
               <div className="w-px h-8 bg-gray-200"></div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">目前持有</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('new_trip.current_balance')}</span>
                 <span className={`text-lg font-black flex items-center gap-1 ${balance < estimatedCost ? 'text-red-500' : 'text-gray-700'}`}>
                   {balance} <span className={`text-xs font-bold ${balance < estimatedCost ? 'text-red-300' : 'text-gray-400'}`}>PTS</span>
                 </span>
@@ -421,7 +423,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
               onClick={onClose}
               className="px-6 py-2.5 text-gray-600 bg-white border border-gray-300 hover:border-gray-400 rounded-xl hover:bg-gray-50 transition-all font-bold text-sm"
             >
-              取消
+              {t('new_trip.cancel')}
             </button>
             <button
               type="submit"
@@ -429,7 +431,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
               className="px-8 py-2.5 text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-all font-bold text-sm shadow-lg shadow-brand-200 hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
             >
               <Plane className="w-4 h-4" />
-              開始生成行程
+              {t('new_trip.start_generating')}
             </button>
           </div>
         </div>
@@ -466,17 +468,17 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
               </div>
               <h3 className="text-xl font-bold relative z-10 flex items-center gap-2">
                 <Plane className="w-5 h-5" />
-                確認生成行程
+                {t('new_trip.confirm_title')}
               </h3>
               <p className="text-brand-100 text-sm mt-1 relative z-10">
-                AI 將為您量身打造專屬的旅遊行程
+                {t('new_trip.confirm_subtitle')}
               </p>
             </div>
 
             {/* Content */}
             <div className="p-6">
               <div className="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <div className="text-gray-500 text-sm">目的地</div>
+                <div className="text-gray-500 text-sm">{t('new_trip.destination')}</div>
                 <div className="font-bold text-gray-900 flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-brand-500" />
                   {formData.destination}
@@ -485,18 +487,18 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">行程規劃費用</span>
+                  <span className="text-gray-500">{t('new_trip.planning_fee')}</span>
                   <span className="font-medium">{estimatedCost} 點</span>
                 </div>
                 <div className="h-px bg-gray-100 my-2"></div>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">總計花費</span>
+                  <span className="font-bold text-gray-900">{t('new_trip.total_cost')}</span>
                   <span className="font-black text-xl text-brand-600 flex items-center gap-1">
                     <Coins className="w-5 h-5" />
                     {isSubscribed ? (
                       <>
                         <span className="line-through text-gray-400 text-base mr-1">{estimatedCost}</span>
-                        <span>會員免費</span>
+                        <span>{t('new_trip.member_free')}</span>
                       </>
                     ) : (
                       finalCost
@@ -508,12 +510,12 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
               {/* Balance Preview */}
               <div className="mt-6 bg-brand-50/50 rounded-xl p-3 flex items-center justify-between text-sm">
                 <div className="flex flex-col">
-                  <span className="text-gray-500 text-xs">目前點數</span>
+                  <span className="text-gray-500 text-xs">{t('new_trip.current_balance')}</span>
                   <span className="font-bold text-gray-700">{balance}</span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-400" />
                 <div className="flex flex-col items-end">
-                  <span className="text-gray-500 text-xs">剩餘點數</span>
+                  <span className="text-gray-500 text-xs">{t('new_trip.remaining_points')}</span>
                   <span className={`font-bold ${balance - finalCost < 0 ? 'text-red-600' : 'text-brand-600'}`}>
                     {balance - finalCost}
                   </span>
@@ -526,7 +528,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                   onClick={() => setShowPointsModal(false)}
                   className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
                 >
-                  取消
+                  {t('new_trip.cancel')}
                 </button>
 
                 {balance < finalCost ? (
@@ -538,7 +540,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                     }}
                     className="px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
                   >
-                    前往儲值中心
+                    {t('insufficient_points.go_to_store')}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
@@ -550,7 +552,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                     }}
                     className="px-4 py-2.5 rounded-xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-2"
                   >
-                    確認支付
+                    {t('new_trip.confirmed_payment')}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
