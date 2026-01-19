@@ -21,7 +21,9 @@ export default function LanguageSwitcher() {
 
     const languages = [
         { code: 'zh-TW', label: '繁體中文', short: '繁' },
-        { code: 'en-US', label: 'English', short: 'EN' }
+        { code: 'en-US', label: 'English', short: 'EN' },
+        { code: 'ja-JP', label: '日本語', short: '日' },
+        { code: 'ko-KR', label: '한국어', short: '한' }
     ];
 
     return (

@@ -4,6 +4,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 import zhTW from './locales/zh-TW.json';
 import enUS from './locales/en-US.json';
+import jaJP from './locales/ja-JP.json';
+import koKR from './locales/ko-KR.json';
 
 i18n
     // detect user language
@@ -26,11 +28,23 @@ i18n
             'en-US': {
                 translation: enUS
             },
+            'ja-JP': {
+                translation: jaJP
+            },
+            'ko-KR': {
+                translation: koKR
+            },
             'zh': { // Fallback for various Chinese locales to zh-TW
                 translation: zhTW
             },
             'en': {
                 translation: enUS
+            },
+            'ja': {
+                translation: jaJP
+            },
+            'ko': {
+                translation: koKR
             }
         }
     });
