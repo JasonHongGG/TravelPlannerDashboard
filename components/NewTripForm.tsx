@@ -76,8 +76,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
 
 
 
-  const { balance, openPurchaseModal } = usePoints();
-
+  const { balance, openPurchaseModal, isSubscribed } = usePoints();
 
   const [formData, setFormData] = useState<TripInput>({
     dateRange: '',
@@ -99,6 +98,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
 
   // Calculate real-time cost
   const estimatedCost = calculateTripCost(formData.dateRange);
+  const finalCost = isSubscribed ? 0 : estimatedCost; // Subscriber benefit
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -493,7 +493,14 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                   <span className="font-bold text-gray-900">總計花費</span>
                   <span className="font-black text-xl text-brand-600 flex items-center gap-1">
                     <Coins className="w-5 h-5" />
-                    {estimatedCost}
+                    {isSubscribed ? (
+                      <>
+                        <span className="line-through text-gray-400 text-base mr-1">{estimatedCost}</span>
+                        <span>會員免費</span>
+                      </>
+                    ) : (
+                      finalCost
+                    )}
                   </span>
                 </div>
               </div>
@@ -507,8 +514,8 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                 <ArrowRight className="w-4 h-4 text-gray-400" />
                 <div className="flex flex-col items-end">
                   <span className="text-gray-500 text-xs">剩餘點數</span>
-                  <span className={`font-bold ${balance - estimatedCost < 0 ? 'text-red-600' : 'text-brand-600'}`}>
-                    {balance - estimatedCost}
+                  <span className={`font-bold ${balance - finalCost < 0 ? 'text-red-600' : 'text-brand-600'}`}>
+                    {balance - finalCost}
                   </span>
                 </div>
               </div>
@@ -522,7 +529,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                   取消
                 </button>
 
-                {balance < estimatedCost ? (
+                {balance < finalCost ? (
                   <button
                     onClick={() => {
                       setShowPointsModal(false);

@@ -34,7 +34,7 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
             <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
 
                 {/* Header with decorative background */}
-                <div className="relative p-6 border-b border-gray-100 bg-gray-50/50 overflow-hidden">
+                <div className="relative p-6 border-b border-gray-100 bg-gray-50/50 overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
                     <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
 
