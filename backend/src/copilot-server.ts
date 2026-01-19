@@ -54,7 +54,7 @@ client.start()
     .catch(err => console.error(`[Copilot] Failed to start client:`, err));
 
 // Helper to deduct points based on ACTION and Cost
-async function deductPoints(userId: string, cost: number, description: string, apiSecret: string): Promise<boolean> {
+async function deductPoints(userId: string, cost: number, description: string, apiSecret: string, metadata?: any): Promise<boolean> {
     if (cost <= 0) return true; // Free
 
     if (!userId) return true; // Anonymous (should restrict?)
@@ -72,7 +72,8 @@ async function deductPoints(userId: string, cost: number, description: string, a
                     date: Date.now(),
                     amount: -cost,
                     type: 'spend',
-                    description: description
+                    description: description,
+                    metadata: metadata
                 }
             })
         });
@@ -190,7 +191,7 @@ app.post('/stream-update', async (req, res) => {
 
             // Updates usually have fixed cost
             const cost = calculateCost(action);
-            const success = await deductPoints(userId, cost, description || `AI Request (${action})`, apiSecret);
+            const success = await deductPoints(userId, cost, description || `AI Request (${action})`, apiSecret, { requiresSubscription: true });
             if (!success) {
                 res.status(403).json({ error: "Insufficient points or Unauthorized." });
                 return;

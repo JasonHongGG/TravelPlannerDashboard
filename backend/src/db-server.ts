@@ -150,6 +150,16 @@ app.post('/users/:email/transaction', (req, res) => {
 
         const userData = users[email];
 
+        // STRICT ACCESS CONTROL
+        // Check if transaction requires subscription (e.g. AI Assistant)
+        if (transaction.metadata?.requiresSubscription) {
+            const isSubscribed = userData.subscription?.active && userData.subscription.endDate > Date.now();
+            if (!isSubscribed) {
+                console.warn(`[DB Server] Rejected subscription-only feature for ${email}`);
+                return res.status(403).json({ error: "此功能僅限會員使用 Subscription Required" });
+            }
+        }
+
         // Handle Subscription Purchase
         if (transaction.type === 'subscription_activation') {
             userData.subscription = {
