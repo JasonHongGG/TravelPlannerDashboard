@@ -10,6 +10,25 @@ interface NewProps {
   isGenerating?: boolean; // Parent controls loading state if needed
 }
 
+const MarkdownComponents = {
+  p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-7 text-[15px] text-gray-700 font-normal">{children}</p>,
+  ul: ({ children }: any) => <ul className="mb-4 pl-4 space-y-2">{children}</ul>,
+  ol: ({ children }: any) => <ol className="mb-4 pl-4 space-y-2 list-decimal marker:text-brand-500 marker:font-bold">{children}</ol>,
+  li: ({ children }: any) => (
+    <li className="text-gray-700 leading-relaxed text-[15px] pl-1 relative">
+      <span className="absolute left-[-1rem] top-2.5 w-1.5 h-1.5 bg-brand-300 rounded-full"></span>
+      {children}
+    </li>
+  ),
+  strong: ({ children }: any) => <span className="font-semibold text-gray-900 bg-brand-50/50 px-1 rounded mx-0.5">{children}</span>,
+  h1: ({ children }: any) => <h1 className="text-lg font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-500" />{children}</h1>,
+  h2: ({ children }: any) => <h2 className="text-base font-bold text-brand-700 mt-5 mb-2 flex items-center gap-2">{children}</h2>,
+  h3: ({ children }: any) => <h3 className="text-sm font-bold text-gray-800 mt-4 mb-2 uppercase tracking-wider">{children}</h3>,
+  blockquote: ({ children }: any) => <blockquote className="border-l-4 border-brand-200 pl-4 py-2 my-3 bg-gray-50/50 italic text-gray-600 rounded-r text-sm">{children}</blockquote>,
+  code: ({ children }: any) => <code className="bg-gray-100 text-brand-600 px-1.5 py-0.5 rounded text-xs font-mono border border-gray-200 font-medium">{children}</code>,
+  a: ({ children, href }: any) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700 underline underline-offset-2 decoration-brand-200/50 hover:decoration-brand-500 transition-all font-medium">{children}</a>
+};
+
 export default function Assistant({ onUpdate, isGenerating: parentIsGenerating = false }: NewProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -160,28 +179,48 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
         </div>
       ) : (
         <>
+          {/* Custom Markdown Styles for AI Responses */}
+
+
           {/* Chat Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50 scroll-smooth">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50/80 scroll-smooth">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
                 className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm
-                                    ${msg.role === 'user' ? 'bg-gray-200' : 'bg-brand-100 text-brand-600'}
+                {/* Avatar */}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-white
+                                    ${msg.role === 'user'
+                    ? 'bg-gradient-to-br from-gray-100 to-gray-200'
+                    : 'bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600'
+                  }
                                 `}>
                   {msg.role === 'user' ? <User className="w-5 h-5 text-gray-600" /> : <Bot className="w-5 h-5" />}
                 </div>
-                <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm border
+
+                {/* Message Bubble */}
+                <div className={`max-w-[85%] rounded-2xl p-5 shadow-sm transition-all
                                     ${msg.role === 'user'
-                    ? 'bg-white text-gray-800 border-gray-100 rounded-tr-none'
-                    : 'bg-white text-gray-800 border-gray-100 rounded-tl-none'
+                    ? 'bg-gradient-to-br from-brand-600 to-brand-500 text-white rounded-tr-none shadow-brand-100'
+                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-sm'
                   }
                                 `}>
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{String(msg.text || '')}</ReactMarkdown>
+
+                  {/* Content Renderer */}
+                  <div className={`text-[15px] leading-relaxed ${msg.role === 'user' ? 'text-white' : ''}`}>
+                    {msg.role === 'user' ? (
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    ) : (
+                      <ReactMarkdown components={MarkdownComponents}>
+                        {String(msg.text || '')}
+                      </ReactMarkdown>
+                    )}
                   </div>
-                  <div className={`text-[10px] mt-2 opacity-50 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+
+                  {/* Timestamp */}
+                  <div className={`text-[10px] mt-2 opacity-60 flex items-center gap-1 ${msg.role === 'user' ? 'justify-end text-brand-100' : 'justify-start text-gray-400'}`}>
+                    {msg.role === 'model' && <Sparkles className="w-2 h-2" />}
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
