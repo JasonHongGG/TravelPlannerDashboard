@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trip, TripData, TripMeta, TripStop, Message, FeasibilityResult } from '../types';
-import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle } from 'lucide-react';
 import Assistant from './Assistant';
 import { aiService } from '../services'; // Import singleton service
 import { safeRender } from '../utils/formatters';
@@ -308,6 +308,20 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     }
   };
 
+  const handleRandomizeCover = () => {
+    if (!onUpdateTripMeta) return;
+
+    // Expanded list of keywords for variety
+    const keywords = ["landmark", "landscape", "street view", "aerial view", "architecture", "night view", "nature", "tourism", "skyline", "scenery", "historic", "culture", "daytime", "vacation"];
+    const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+    const city = trip.input.destination.split(',')[0].trim();
+    // Add timestamp to ensure uniqueness in React state even if keyword repeats
+    const timestamp = Date.now();
+    const newUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1280&h=720&c=7&rs=1&p=0&t=${timestamp}`;
+
+    onUpdateTripMeta({ customCoverImage: newUrl });
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden relative">
       <input
@@ -413,6 +427,15 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               )}
+
+              {/* Randomize Button */}
+              <button
+                onClick={handleRandomizeCover}
+                className="group/random flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-black/20 hover:bg-brand-500/80 text-white/90 hover:text-white rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 shadow-sm"
+                title="隨機封面"
+              >
+                <Shuffle className="w-4 h-4 group-hover/random:rotate-180 transition-transform duration-500" />
+              </button>
 
               {/* Edit Button */}
               <button
