@@ -55,9 +55,11 @@ export const getTripCover = (trip: Trip): string => {
     // We sum the char codes of the trip ID to get a pseudo-random seed
     const seed = trip.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
-    const keywords = ["landmark", "scenery", "travel", "attraction", "view"];
+    const keywords = ["scenery", "architecture", "landmark", "skyline", "nature", "beach"];
     const index = seed % keywords.length;
     const keyword = keywords[index];
 
-    return `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + keyword)}&w=1920&h=1080&c=7&rs=1&p=0`;
+    // Append negative keywords to verify strict compliance with user request
+    const query = `${city} ${keyword} -map -people -person -chart -text`;
+    return `https://th.bing.com/th?q=${encodeURIComponent(query)}&w=1920&h=1080&c=7&rs=1&p=0`;
 };
