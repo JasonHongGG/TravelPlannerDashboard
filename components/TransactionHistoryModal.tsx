@@ -82,8 +82,8 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${isPurchase
-                                                    ? 'bg-green-50 border-green-100 text-green-600'
-                                                    : 'bg-orange-50 border-orange-100 text-orange-600'
+                                                ? 'bg-green-50 border-green-100 text-green-600'
+                                                : 'bg-orange-50 border-orange-100 text-orange-600'
                                                 }`}>
                                                 {isPurchase ? (
                                                     <TrendingUp className="w-5 h-5" />
@@ -103,7 +103,7 @@ export default function TransactionHistoryModal({ isOpen, onClose }: Props) {
                                             </div>
                                         </div>
 
-                                        <div className={`text-base font-black tracking-tight ${isPositive ? 'text-green-600' : 'text-gray-900'
+                                        <div className={`text-base font-black tracking-tight ${isPositive ? 'text-green-600' : (tx.amount < 0 ? 'text-orange-600' : 'text-gray-900')
                                             }`}>
                                             {isPositive ? '+' : ''}{tx.amount}
                                             <span className="text-xs font-medium ml-1 text-gray-400">P</span>

@@ -329,7 +329,6 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
                 trip={trip}
                 onSelect={() => onSelectTrip(trip)}
                 onDelete={() => onDeleteTrip(trip.id)}
-                onDelete={() => onDeleteTrip(trip.id)}
                 onExport={(e) => handleExport(e, trip)}
                 onRetry={() => onRetryTrip(trip.id)}
               />
