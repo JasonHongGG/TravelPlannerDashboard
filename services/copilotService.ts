@@ -123,6 +123,17 @@ export class CopilotService implements IAIService {
         let isJsonMode = false;
         let jsonBuffer = "";
         const delimiter = "___UPDATE_JSON___";
+        let displayedText = "";
+
+        const typewrite = async (newText: string) => {
+            // If text is huge (e.g. busty burst), speed up slightly to avoid too long lag
+            const delay = newText.length > 50 ? 5 : 15;
+            for (const char of newText) {
+                displayedText += char;
+                if (onThought) onThought(displayedText);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        };
 
         while (true) {
             const { done, value } = await reader.read();
@@ -138,19 +149,38 @@ export class CopilotService implements IAIService {
                         const data = JSON.parse(dataStr);
                         if (data.type === 'content') {
                             const text = data.chunk;
+
                             if (!isJsonMode) {
                                 fullText += text;
                                 const delimiterIndex = fullText.indexOf(delimiter);
 
                                 if (delimiterIndex !== -1) {
                                     isJsonMode = true;
-                                    const thoughtPart = fullText.substring(0, delimiterIndex);
-                                    if (onThought) onThought(thoughtPart);
+                                    // The part of 'text' that belongs to thought
+                                    // Calculate how much of 'text' is before the delimiter
+                                    // fullText = [Prev][NewPart]...
+                                    // Delimiter is at index X.
+                                    // We need to typewrite the portion of 'text' that completes the thought.
+                                    // Easiest way: typewrite EVERYTHING up to delimiter, but displayedText tracks it.
+                                    // Actually, just typewrite the new text until the delimiter cut-off.
+
+                                    const thoughtEndIndex = delimiterIndex;
+                                    const currentLength = fullText.length - text.length;
+                                    // If delimiter started in previous chunk, logic is tricky. 
+                                    // Simplified: Just typewrite 'text' IF it's part of thought.
+
+                                    // Robust way:
+                                    const fullThought = fullText.substring(0, delimiterIndex);
+                                    const newThoughtPart = fullThought.substring(displayedText.length);
+
+                                    await typewrite(newThoughtPart);
+
                                     jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
                                 } else {
-                                    if (onThought) onThought(fullText);
+                                    await typewrite(text);
                                 }
                             } else {
+                                fullText += text; // Keep tracking full text just in case
                                 jsonBuffer += text;
                             }
                         } else if (data.type === 'error') {
@@ -159,7 +189,7 @@ export class CopilotService implements IAIService {
                             // Stream complete
                         }
                     } catch (e) {
-                        // ignore parse errors for partial lines or empty keep-alives
+                        // ignore parse errors
                     }
                 }
             }

@@ -12,14 +12,8 @@ interface NewProps {
 
 const MarkdownComponents = {
   p: ({ children }: any) => <p className="mb-3 last:mb-0 leading-7 text-[15px] text-gray-700 font-normal">{children}</p>,
-  ul: ({ children }: any) => <ul className="mb-4 pl-4 space-y-2">{children}</ul>,
-  ol: ({ children }: any) => <ol className="mb-4 pl-4 space-y-2 list-decimal marker:text-brand-500 marker:font-bold">{children}</ol>,
-  li: ({ children }: any) => (
-    <li className="text-gray-700 leading-relaxed text-[15px] pl-1 relative">
-      <span className="absolute left-[-1rem] top-2.5 w-1.5 h-1.5 bg-brand-300 rounded-full"></span>
-      {children}
-    </li>
-  ),
+  ul: ({ children, ...props }: any) => <ul {...props} className="mb-4 pl-6 space-y-2 list-disc marker:text-brand-300">{children}</ul>,
+  ol: ({ children, ...props }: any) => <ol {...props} className="mb-4 pl-6 space-y-2 list-decimal marker:text-brand-600 marker:font-bold">{children}</ol>,
   strong: ({ children }: any) => <span className="font-semibold text-gray-900 bg-brand-50/50 px-1 rounded mx-0.5">{children}</span>,
   h1: ({ children }: any) => <h1 className="text-lg font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-500" />{children}</h1>,
   h2: ({ children }: any) => <h2 className="text-base font-bold text-brand-700 mt-5 mb-2 flex items-center gap-2">{children}</h2>,
@@ -227,22 +221,25 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
               </div>
             ))}
 
-            {/* Thought Process (Real-time) */}
+            {/* Streaming Message (Real-time) */}
             {isThinking && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center shrink-0 animate-pulse">
-                  <Bot className="w-5 h-5" />
+              <div className="flex gap-3 flex-row animate-in fade-in duration-300">
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-white bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600">
+                  <Bot className="w-5 h-5 animate-pulse" />
                 </div>
-                <div className="max-w-[85%] space-y-2">
-                  {currentThought && (
-                    <div className="text-xs text-gray-400 italic bg-gray-100 rounded-lg px-3 py-2 animate-in fade-in">
-                      {currentThought}
-                    </div>
-                  )}
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+
+                {/* Message Bubble */}
+                <div className="max-w-[85%] rounded-2xl p-5 shadow-sm bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-brand-50/50">
+                  <div className="text-[15px] leading-relaxed min-h-[24px]">
+                    <ReactMarkdown components={MarkdownComponents}>
+                      {currentThought || ' '}
+                    </ReactMarkdown>
+                    <span className="inline-block w-2 h-4 ml-1 align-middle bg-brand-400 animate-pulse rounded-full"></span>
+                  </div>
+                  <div className="text-[10px] mt-2 opacity-60 flex items-center gap-1 text-gray-400">
+                    <Sparkles className="w-2 h-2 animate-spin" />
+                    <span>正在思考中...</span>
                   </div>
                 </div>
               </div>
