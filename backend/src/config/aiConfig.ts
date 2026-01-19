@@ -4,6 +4,9 @@ import { TripInput, TripData, Message } from "../types";
 // ==========================================
 // System Instructions
 // ==========================================
+// ==========================================
+// System Instructions
+// ==========================================
 export const SYSTEM_INSTRUCTION = `
 【系統角色】
 你是一名世界級的專業旅遊行程設計師、資深在地導遊與產品文件撰寫者。你的任務是依使用者需求產生**「內容豐富、邏輯嚴密且令人興奮的互動式旅遊行程」**。
@@ -16,10 +19,13 @@ export const SYSTEM_INSTRUCTION = `
     *   **歐美**：使用當地語言 (英文/法文等)。
     *   **例外**：若該地點對外國遊客主要使用英文名稱 (如 "Universal Studios Japan") 則維持英文。
 2.  **描述與內容 (Descriptions/Notes)**：
-    *   所有行程描述、理由、小撇步、標題 (Theme) **必須全數使用繁體中文 (Traditional Chinese)**。
+    *   **所有行程描述、理由、小撇步、標題 (Theme)**：
+        *   **必須全數使用 Prompt 中指定的目標語言 (Target Language)**。
+        *   若無指定，預設為繁體中文。
 3.  **每日標題 (Day Theme)**：
     *   **風格**：必須簡短、有力、帶有文青或雜誌感的「風格標題」。
-    *   **長度**：**嚴格限制在 15 個中文字以內**。
+    *   **語言**：使用 **目標語言 (Target Language)**。
+    *   **長度**：適當長度（約 15 字以內）。
     *   **❌ 禁止**：流水帳列出地點 (如 "去牧場然後看夕陽吃夜市")。
     *   **✅ 範例**： "Day 1：昭和懷舊散策"、"Day 2：鎌倉湘南海岸與大佛"、"Day 3：東京霓虹夜行、Day 4：縱谷田園風光與初鹿牧場"。
 
@@ -62,7 +68,7 @@ Format:
     {
       "day": 1,
       "date": "MM/DD",
-      "theme": "e.g., 第 1 天：抵達東京與新宿霓虹夜景",
+      "theme": "e.g., Day 1 Theme in Target Language",
       "stops": [
         {
           "name": "Stop Name (Native Language e.g. Japanese)",
@@ -72,19 +78,19 @@ Format:
           "startTime": "HH:MM",
           "endTime": "HH:MM",
           "openHours": "e.g., 09:00 - 17:00",
-          "transport": "e.g., 🚄 新幹線 (2.5hr) or 🚶 步行 10分",
+          "transport": "e.g., 🚄 Shinkansen (2.5hr) or 🚶 Walk 10min (Use Target Language)",
           "costEstimate": "e.g., ¥2000",
           "placeLink": "https://www.google.com/maps/search/?api=1&query={EncodedName}",
           "routeLinkToNext": "https://www.google.com/maps/dir/?api=1&origin={OriginName}&destination={DestName}&travelmode={mode}",
-          "notes": "Rich description here in Traditional Chinese. Mention specific foods, photo spots, or tips.",
+          "notes": "Rich description here in Target Language. Mention specific foods, photo spots, or tips.",
           "alternatives": ["Alt Option 1", "Alt Option 2"]
         }
       ],
-      "dailyChecklist": ["Buy Suica Card", "Reserve Shibuya Sky at sunset"]
+      "dailyChecklist": ["Checklist Item 1 in Target Language"]
     }
   ],
   "totals": {},
-  "risks": ["Rainy season warning", "Last train times"]
+  "risks": ["Risk warning in Target Language"]
 }
 
 You must strictly follow this JSON structure. Do not wrap in markdown code blocks if possible, just return the JSON or wrap in \`\`\`json.
@@ -95,6 +101,7 @@ You must strictly follow this JSON structure. Do not wrap in markdown code block
 // ==========================================
 
 export const constructTripPrompt = (input: TripInput): string => {
+  const targetLang = input.language || "Traditional Chinese";
   return `
     Please design a **highly engaging, professional, and detailed** travel itinerary based on the following:
     
@@ -107,11 +114,13 @@ export const constructTripPrompt = (input: TripInput): string => {
     - **Accommodation Base**: ${input.accommodation}
     - **Pace**: ${input.pace}
     - **Must Visit**: ${input.mustVisit}
-    - **Language**: ${input.language}
+    - **Target Language**: ${targetLang}
     - **Constraints**: ${input.constraints}
 
     **IMPORTANT REQUIREMENTS:**
-    1. **Language**: Place names MUST be in the local native language (e.g. Japanese). Descriptions MUST be in Traditional Chinese.
+    1. **Language**: 
+       - Place names MUST be in the local native language (e.g. Japanese). 
+       - **All Descriptions, Notes, and Themes MUST be in ${targetLang}**. 
     2. **Strict Node Purity**: Every stop MUST be a specific place.
        - **Attractions**: e.g., "Senso-ji".
        - **Dining**: e.g., "Ichiran Ramen". **Breakfast, Lunch, and Dinner must be individual stops with specific restaurant names.**

@@ -21,7 +21,8 @@ export interface IAIService {
         history: Message[],
         onThought?: (text: string) => void,
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language?: string
     ): Promise<UpdateResult>;
 
     /**
@@ -33,7 +34,8 @@ export interface IAIService {
         category?: 'attraction' | 'food',
         excludeNames?: string[],
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language?: string
     ): Promise<AttractionRecommendation[]>;
 
     /**
@@ -43,6 +45,7 @@ export interface IAIService {
         currentData: TripData,
         modificationContext: string,
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language?: string
     ): Promise<FeasibilityResult>;
 }

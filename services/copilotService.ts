@@ -110,9 +110,10 @@ export class CopilotService implements IAIService {
         history: Message[],
         onThought?: ((text: string) => void) | undefined,
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<UpdateResult> {
-        const prompt = constructUpdatePrompt(currentData, history);
+        const prompt = constructUpdatePrompt(currentData, history, language);
         const model = SERVICE_CONFIG.copilot?.models.tripUpdater || 'gpt-4o';
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -227,12 +228,13 @@ export class CopilotService implements IAIService {
     async getRecommendations(
         location: string,
         interests: string,
-        category?: "attraction" | "food",
-        excludeNames?: string[],
+        category: "attraction" | "food" = 'attraction',
+        excludeNames: string[] = [],
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<AttractionRecommendation[]> {
-        const prompt = constructRecommendationPrompt(location, interests, category || 'attraction', excludeNames || []);
+        const prompt = constructRecommendationPrompt(location, interests, category || 'attraction', excludeNames || [], language);
         const model = SERVICE_CONFIG.copilot?.models.recommender || 'gpt-4o';
 
         const responseText = await this.postGenerate(prompt, model, undefined, userId, 'GET_RECOMMENDATIONS', `Recommendations: ${location} (${category})`, undefined, apiSecret);
@@ -255,9 +257,10 @@ export class CopilotService implements IAIService {
         currentData: TripData,
         modificationContext: string,
         userId?: string,
-        apiSecret?: string
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<FeasibilityResult> {
-        const prompt = constructFeasibilityPrompt(currentData, modificationContext);
+        const prompt = constructFeasibilityPrompt(currentData, modificationContext, language);
         const model = SERVICE_CONFIG.copilot?.models.recommender || 'gpt-4o';
 
         const responseText = await this.postGenerate(prompt, model, undefined, userId, 'CHECK_FEASIBILITY', `Feasibility Check`, undefined, apiSecret);

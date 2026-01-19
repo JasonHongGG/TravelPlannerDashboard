@@ -37,7 +37,7 @@ export default function AttractionExplorer({
     onConfirm,
     mode = 'modification' // Default to modification for backward compatibility
 }: Props) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [location, setLocation] = useState(initialLocation);
     const [lastSearchLocation, setLastSearchLocation] = useState(initialLocation);
 
@@ -254,20 +254,31 @@ export default function AttractionExplorer({
         setBuffer(prev => ({ ...prev, [targetTab]: [] }));
         setIsWaitingForBuffer(false);
 
-        // Security: Pass user ID and cost to backend via service
-        executeSearchLogic(query, targetTab, true, user?.email, totalCost);
+        // Security: Pass user ID and apiSecret to backend via service
+        // Note: Service handles cost calculation (backend), we just pass credentials
+        executeSearchLogic(query, targetTab, true, user?.email, user?.apiSecret);
     };
 
 
 
-    const executeSearchLogic = async (query: string, targetTab: TabType, isNewSearch: boolean, userId?: string, cost?: number) => {
+    const executeSearchLogic = async (query: string, targetTab: TabType, isNewSearch: boolean, userId?: string, apiSecret?: string) => {
         setInitialLoading(true);
 
         try {
             // Initial fetch only excludes current stops (results are empty)
             const excludeNames = [...currentStops.map(s => s.name)];
-            // Pass userId and cost to getRecommendations
-            const newItems = await aiService.getRecommendations(query, initialInterests, targetTab, excludeNames, userId, cost);
+            const getPromptLanguage = (lng: string) => {
+                switch (lng) {
+                    case 'en-US': return 'English';
+                    case 'ja-JP': return 'Japanese';
+                    case 'ko-KR': return 'Korean';
+                    default: return 'Traditional Chinese';
+                }
+            };
+            const lang = getPromptLanguage(i18n.language);
+
+            // Pass userId, apiSecret, and language
+            const newItems = await aiService.getRecommendations(query, initialInterests, targetTab, excludeNames, userId, apiSecret, lang);
 
             if (isMounted.current) {
                 setResults(prev => ({

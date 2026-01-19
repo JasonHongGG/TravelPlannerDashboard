@@ -25,8 +25,22 @@ interface Props {
   onUpdateTripMeta?: (updates: Partial<Trip>) => void; // Optional for backward compatibility, but passed from App
 }
 
+import { useAuth } from '../context/AuthContext';
+
 export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMeta }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { user } = useAuth();
+
+  // Map i18n code to prompt language name
+  const getPromptLanguage = (lng: string) => {
+    switch (lng) {
+      case 'en-US': return 'English';
+      case 'ja-JP': return 'Japanese';
+      case 'ko-KR': return 'Korean';
+      default: return 'Traditional Chinese';
+    }
+  };
+
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'itinerary' | 'budget' | 'risks'>('itinerary');
   const [isMapOpen, setIsMapOpen] = useState(true); // State to toggle map visibility
@@ -88,7 +102,9 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     setIsCheckingFeasibility(true);
     try {
       // For Explorer, we check against the CURRENT data because the new data doesn't exist yet
-      const result = await aiService.checkFeasibility(trip.data, context);
+      const lang = getPromptLanguage(i18n.language);
+      // Pass user credentials!
+      const result = await aiService.checkFeasibility(trip.data, context, user?.email, user?.apiSecret, lang);
 
       // CRITICAL: Turn off feasibility loading state BEFORE executing the update.
       // Otherwise "Evaluating..." overrides "Reshaping..." in the UI because both flags would be true.
@@ -137,8 +153,11 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   const handleAiUpdate = async (history: Message[], onThought: (text: string) => void): Promise<string> => {
     if (!trip.data) return "";
 
+    const lang = getPromptLanguage(i18n.language);
+
     // 1. 先讓 AI 處理對話與生成 (無論是聊天還是修改)
-    const result = await aiService.updateTrip(trip.data!, history, onThought);
+    // Pass user credentials
+    const result = await aiService.updateTrip(trip.data!, history, onThought, user?.email, user?.apiSecret, lang);
 
     // 2. 如果結果中沒有 updatedData，表示 AI 認為這只是一般對話，不需要檢查可行性
     if (!result.updatedData) {
@@ -152,7 +171,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       const lastMsg = history[history.length - 1].text;
       const checkResult = await aiService.checkFeasibility(
         result.updatedData, // Check the PROPOSED itinerary
-        `User Chat Request: ${lastMsg}`
+        `User Chat Request: ${lastMsg}`,
+        user?.email,
+        user?.apiSecret,
+        lang
       );
 
       // Check finished
@@ -207,19 +229,24 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           newMustVisit,
           newAvoid,
           keepExisting,
-          removeExisting
+          removeExisting,
+          getPromptLanguage(i18n.language)
         );
 
         const syntheticHistory: Message[] = [
           { role: 'user', text: prompt, timestamp: Date.now() }
         ];
 
+        const lang = getPromptLanguage(i18n.language);
         const result = await aiService.updateTrip(
           trip.data!,
           syntheticHistory,
           (thought) => {
             console.log("AI Thinking:", thought);
-          }
+          },
+          user?.email,
+          user?.apiSecret,
+          lang
         );
 
         if (result.updatedData) {

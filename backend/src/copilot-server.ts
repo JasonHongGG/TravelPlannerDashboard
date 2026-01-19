@@ -113,6 +113,8 @@ app.post('/generate', async (req, res) => {
             costDescription = `Generate Trip: ${tripInput.destination} (${tripInput.dateRange})`;
 
             console.log(`[Security] Generated secure prompt for ${tripInput.destination}. Cost: ${calculatedCost}`);
+            console.log(`[Debug] Input Language: ${tripInput.language}`);
+            console.log(`[Debug] Final Prompt Snippet: ${finalPrompt.substring(0, 500)}...`);
         } else {
             // Legacy or other actions (e.g. Chat Update, Feasibility)
             // For these, we currently trust the prompt but enforce action cost
@@ -163,6 +165,10 @@ app.post('/generate', async (req, res) => {
         });
 
         await done;
+
+        console.log(`[Debug] AI Response Length: ${fullContent.length}`);
+        console.log(`[Debug] AI Response Preview: ${fullContent.substring(0, 200)}...`);
+
         res.json({ text: fullContent });
 
     } catch (error: any) {

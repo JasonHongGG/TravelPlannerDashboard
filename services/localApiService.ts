@@ -113,7 +113,7 @@ export class LocalApiService implements IAIService {
         return newData;
     }
 
-    async generateTrip(input: TripInput): Promise<TripData> {
+    async generateTrip(input: TripInput, userId?: string, apiSecret?: string): Promise<TripData> {
         const userPrompt = constructTripPrompt(input);
         const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n---\n\n${userPrompt}`;
         const model = SERVICE_CONFIG.local_api.models.tripGenerator;
@@ -125,9 +125,12 @@ export class LocalApiService implements IAIService {
     async updateTrip(
         currentData: TripData,
         history: Message[],
-        onThought?: (text: string) => void
+        onThought?: (text: string) => void,
+        userId?: string,
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<UpdateResult> {
-        const userPrompt = constructUpdatePrompt(currentData, history);
+        const userPrompt = constructUpdatePrompt(currentData, history, language);
         const fullPrompt = `${SYSTEM_INSTRUCTION}\n\n---\n\n${userPrompt}`;
         const model = SERVICE_CONFIG.local_api.models.tripUpdater;
 
@@ -194,9 +197,12 @@ export class LocalApiService implements IAIService {
         location: string,
         interests: string,
         category: 'attraction' | 'food' = 'attraction',
-        excludeNames: string[] = []
+        excludeNames: string[] = [],
+        userId?: string,
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<AttractionRecommendation[]> {
-        const prompt = constructRecommendationPrompt(location, interests, category, excludeNames);
+        const prompt = constructRecommendationPrompt(location, interests, category, excludeNames, language);
         const model = SERVICE_CONFIG.local_api.models.recommender;
 
         const response = await this.callApi(prompt, model);
@@ -212,9 +218,12 @@ export class LocalApiService implements IAIService {
 
     async checkFeasibility(
         currentData: TripData,
-        modificationContext: string
+        modificationContext: string,
+        userId?: string,
+        apiSecret?: string,
+        language: string = "Traditional Chinese"
     ): Promise<FeasibilityResult> {
-        const prompt = constructFeasibilityPrompt(currentData, modificationContext);
+        const prompt = constructFeasibilityPrompt(currentData, modificationContext, language);
         const model = SERVICE_CONFIG.local_api.models.recommender;
 
         const response = await this.callApi(prompt, model);

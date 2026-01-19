@@ -32,3 +32,5 @@ database/
 
 # Secrets
 .env
+.agent/
+.shared/

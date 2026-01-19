@@ -1,15 +1,16 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult } from "../types";
-import { 
-  SYSTEM_INSTRUCTION, 
-  constructTripPrompt, 
-  constructUpdatePrompt, 
+import {
+  SYSTEM_INSTRUCTION,
+  constructTripPrompt,
+  constructUpdatePrompt,
   constructRecommendationPrompt,
   constructFeasibilityPrompt
 } from "../config/aiConfig";
 import { SERVICE_CONFIG } from "../config/serviceConfig";
 import { IAIService, UpdateResult } from "./aiInterface";
+
 
 export class GeminiService implements IAIService {
   private getClient() {
@@ -32,9 +33,9 @@ export class GeminiService implements IAIService {
     try {
       const data = JSON.parse(jsonStr);
       if (strict) {
-          if (!data.tripMeta || !data.days) {
-              throw new Error("Response is missing required trip data fields (tripMeta or days).");
-          }
+        if (!data.tripMeta || !data.days) {
+          throw new Error("Response is missing required trip data fields (tripMeta or days).");
+        }
       }
       return data;
     } catch (e) {
@@ -83,7 +84,7 @@ export class GeminiService implements IAIService {
 
     return await this.callWithRetry(async () => {
       const response = await ai.models.generateContent({
-        model: SERVICE_CONFIG.gemini.models.tripGenerator, 
+        model: SERVICE_CONFIG.gemini.models.tripGenerator,
         contents: prompt,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
@@ -95,12 +96,13 @@ export class GeminiService implements IAIService {
   }
 
   async updateTrip(
-    currentData: TripData, 
+    currentData: TripData,
     history: Message[],
-    onThought?: (text: string) => void
+    onThought?: (text: string) => void,
+    language: string = "Traditional Chinese"
   ): Promise<UpdateResult> {
     const ai = this.getClient();
-    const prompt = constructUpdatePrompt(currentData, history);
+    const prompt = constructUpdatePrompt(currentData, history, language);
 
     const responseStream = await ai.models.generateContentStream({
       model: SERVICE_CONFIG.gemini.models.tripUpdater,
@@ -117,42 +119,43 @@ export class GeminiService implements IAIService {
 
     for await (const chunk of responseStream) {
       const text = chunk.text;
-      
+
       if (!isJsonMode) {
         fullText += text;
         const delimiterIndex = fullText.indexOf(delimiter);
-        
+
         if (delimiterIndex !== -1) {
-            isJsonMode = true;
-            const thoughtPart = fullText.substring(0, delimiterIndex);
-            if (onThought) onThought(thoughtPart);
-            jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
+          isJsonMode = true;
+          const thoughtPart = fullText.substring(0, delimiterIndex);
+          if (onThought) onThought(thoughtPart);
+          jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
         } else {
-            if (onThought) onThought(fullText);
+          if (onThought) onThought(fullText);
         }
       } else {
-         jsonBuffer += text;
+        jsonBuffer += text;
       }
     }
 
     if (isJsonMode) {
-        const partialUpdate = this.parseJsonFromResponse(jsonBuffer, false);
-        const updatedData = this.mergeTripData(currentData, partialUpdate);
-        const finalText = fullText.split(delimiter)[0];
-        return { responseText: finalText, updatedData: updatedData };
+      const partialUpdate = this.parseJsonFromResponse(jsonBuffer, false);
+      const updatedData = this.mergeTripData(currentData, partialUpdate);
+      const finalText = fullText.split(delimiter)[0];
+      return { responseText: finalText, updatedData: updatedData };
     } else {
-        return { responseText: fullText };
+      return { responseText: fullText };
     }
   }
 
   async getRecommendations(
-    location: string, 
+    location: string,
     interests: string,
     category: 'attraction' | 'food' = 'attraction',
-    excludeNames: string[] = []
+    excludeNames: string[] = [],
+    language: string = "Traditional Chinese"
   ): Promise<AttractionRecommendation[]> {
     const ai = this.getClient();
-    const prompt = constructRecommendationPrompt(location, interests, category, excludeNames);
+    const prompt = constructRecommendationPrompt(location, interests, category, excludeNames, language);
 
     const response = await ai.models.generateContent({
       model: SERVICE_CONFIG.gemini.models.recommender,
@@ -186,10 +189,11 @@ export class GeminiService implements IAIService {
 
   async checkFeasibility(
     currentData: TripData,
-    modificationContext: string
+    modificationContext: string,
+    language: string = "Traditional Chinese"
   ): Promise<FeasibilityResult> {
     const ai = this.getClient();
-    const prompt = constructFeasibilityPrompt(currentData, modificationContext);
+    const prompt = constructFeasibilityPrompt(currentData, modificationContext, language);
 
     const response = await ai.models.generateContent({
       model: SERVICE_CONFIG.gemini.models.recommender, // Use faster model for check
@@ -199,10 +203,10 @@ export class GeminiService implements IAIService {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-             feasible: { type: Type.BOOLEAN },
-             riskLevel: { type: Type.STRING, enum: ['low', 'moderate', 'high'] },
-             issues: { type: Type.ARRAY, items: { type: Type.STRING } },
-             suggestions: { type: Type.ARRAY, items: { type: Type.STRING } }
+            feasible: { type: Type.BOOLEAN },
+            riskLevel: { type: Type.STRING, enum: ['low', 'moderate', 'high'] },
+            issues: { type: Type.ARRAY, items: { type: Type.STRING } },
+            suggestions: { type: Type.ARRAY, items: { type: Type.STRING } }
           },
           required: ['feasible', 'riskLevel', 'issues', 'suggestions']
         }
@@ -210,11 +214,11 @@ export class GeminiService implements IAIService {
     });
 
     try {
-        return JSON.parse(response.text || "{}");
+      return JSON.parse(response.text || "{}");
     } catch (e) {
-        console.error("Failed to parse feasibility check", e);
-        // Default to safe/feasible if parsing fails, to avoid blocking flow
-        return { feasible: true, riskLevel: 'low', issues: [], suggestions: [] };
+      console.error("Failed to parse feasibility check", e);
+      // Default to safe/feasible if parsing fails, to avoid blocking flow
+      return { feasible: true, riskLevel: 'low', issues: [], suggestions: [] };
     }
   }
 }

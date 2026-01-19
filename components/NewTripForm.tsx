@@ -65,12 +65,27 @@ const SectionHeader = ({ title }: { title: string }) => (
 );
 
 export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Sync language with current i18n setting when form opens
+  React.useEffect(() => {
+    if (isOpen) {
+      const getPromptLanguage = (lng: string) => {
+        switch (lng) {
+          case 'en-US': return 'English';
+          case 'ja-JP': return 'Japanese';
+          case 'ko-KR': return 'Korean';
+          default: return 'Traditional Chinese';
+        }
+      };
+      setFormData(prev => ({ ...prev, language: getPromptLanguage(i18n.language) }));
+    }
+  }, [isOpen, i18n.language]);
 
   // Parse initial dates from string if present (for editing or previous drafts)
   // Simple heuristic: just start clean or parse if needed. For now start clean or user picks.
@@ -79,6 +94,16 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
 
 
   const { balance, openPurchaseModal, isSubscribed } = usePoints();
+
+  // Map i18n code to prompt language name
+  const getPromptLanguage = (lng: string) => {
+    switch (lng) {
+      case 'en-US': return 'English';
+      case 'ja-JP': return 'Japanese';
+      case 'ko-KR': return 'Korean';
+      default: return 'Traditional Chinese';
+    }
+  };
 
   const [formData, setFormData] = useState<TripInput>({
     dateRange: '',
@@ -90,7 +115,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
     accommodation: '',
     pace: '',
     mustVisit: '',
-    language: '繁體中文',
+    language: getPromptLanguage(i18n.language),
     constraints: ''
   });
 

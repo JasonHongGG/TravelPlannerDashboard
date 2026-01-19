@@ -25,10 +25,10 @@ const MarkdownComponents = {
 };
 
 export default function Assistant({ onUpdate, isGenerating: parentIsGenerating = false }: NewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: '嗨！我是您的 AI 旅遊助理。想要調整行程、尋找餐廳，或是有任何旅行問題，都可以問我喔！', timestamp: Date.now() } // TODO: i18n for this
+    { role: 'model', text: t('assistant.welcome_message'), timestamp: Date.now() }
   ]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -39,6 +39,17 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { isSubscribed, openPurchaseModal } = usePoints();
+
+  // Update welcome message when language changes (only if it's the only message)
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].role === 'model') {
+      setMessages([{
+        role: 'model',
+        text: t('assistant.welcome_message'),
+        timestamp: messages[0].timestamp
+      }]);
+    }
+  }, [i18n.language, t]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
