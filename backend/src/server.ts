@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { requireAuth } from './utils/auth';
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -29,7 +29,8 @@ async function deductPoints(userId: string, cost: number, description: string, a
     if (!userId) return true;
 
     try {
-        const response = await fetch(`http://localhost:3002/users/${userId}/transaction`, {
+        const dbUrl = process.env.DB_SERVER_URL || "http://localhost:3002";
+        const response = await fetch(`${dbUrl}/users/${userId}/transaction`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

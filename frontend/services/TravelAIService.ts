@@ -1,7 +1,7 @@
 import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "../types";
 
 
-const SERVER_URL = "http://localhost:3001";
+const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
 export class TravelAIService {
 

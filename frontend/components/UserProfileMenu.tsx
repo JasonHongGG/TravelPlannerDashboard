@@ -146,27 +146,6 @@ export default function UserProfileMenu() {
 
                             <div className="border-t border-gray-100 my-2"></div>
 
-                            {/* Language Switcher */}
-                            <div className="px-3 py-2">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">{t('profile.language')}</label>
-                                <div className="flex bg-gray-100 p-1 rounded-lg">
-                                    <button
-                                        onClick={() => i18n.changeLanguage('zh-TW')}
-                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${i18n.language === 'zh-TW' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                    >
-                                        繁中
-                                    </button>
-                                    <button
-                                        onClick={() => i18n.changeLanguage('en-US')}
-                                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${i18n.language === 'en-US' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}
-                                    >
-                                        EN
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="border-t border-gray-100 my-2"></div>
-
                             <button
                                 onClick={logout}
                                 className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 hover:text-red-600 text-gray-500 transition-colors"

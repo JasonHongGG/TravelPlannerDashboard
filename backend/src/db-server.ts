@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { requireAuth, verifyIdToken } from './utils/auth';
 
 const app = express();
-const port = 3002;
+const port = process.env.DB_SERVER_PORT || 3002;
 
 app.use(cors());
 app.use(express.json());

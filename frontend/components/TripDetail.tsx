@@ -69,14 +69,16 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
 
   // Effect: Update map when day changes
   useEffect(() => {
-    const day = trip.data?.days.find(d => d.day === selectedDay);
+    const days = trip.data?.days || [];
+    const day = days.find(d => d.day === selectedDay);
     const config = getDayMapConfig(day, trip.input.destination);
     setMapState(config);
   }, [selectedDay, trip.data, trip.input.destination]);
 
   // Handler: Reset Map to Full Route
   const handleResetMap = () => {
-    const day = trip.data?.days.find(d => d.day === selectedDay);
+    const days = trip.data?.days || [];
+    const day = days.find(d => d.day === selectedDay);
     const config = getDayMapConfig(day, trip.input.destination);
     setMapState(config);
   };
