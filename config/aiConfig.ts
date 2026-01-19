@@ -143,6 +143,13 @@ export const constructUpdatePrompt = (currentData: TripData, history: Message[])
     2.  Provide a helpful, conversational response listing specific options, pros/cons, or asking clarifying questions. **Use Traditional Chinese.**
     3.  End your response there.
 
+    **CRITICAL FORMATTING RULES FOR CHAT (Strictly Enforce):**
+    - **Use Markdown Lists**: When offering options, **ALWAYS** use a proper markdown list (e.g., "1. Option A" or "- Option B").
+    - **NO Inline Numbering**: **NEVER** use inline circled numbers (e.g., ①, ②, ③) or inline text lists (e.g., "1) A, 2) B"). This breaks the mobile UI layout.
+    - **Break Lines**: Put every option on a new line.
+    - **Short Paragraphs**: Keep description paragraphs short (under 3 lines) for readability.
+    - **Visual Structure**: Use **Bold** for place names to make them stand out.
+
     **Scenario B: Decision / Action Phase**
     If the user has made a selection (e.g., "Let's go with option A", "Add the ramen shop"), or gave a direct command (e.g., "Delete day 2"):
     1.  First, write a brief confirmation of what you are doing. **IMPORTANT: Do NOT use technical terms like 'JSON' or 'Data' in this confirmation. Use natural language like "I will update your itinerary with [Selection]" or "Adding that spot to your plan now". Use Traditional Chinese.**
