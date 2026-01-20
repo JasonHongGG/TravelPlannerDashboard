@@ -34,9 +34,11 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
   const [isThinking, setIsThinking] = useState(false);
   const [currentThought, setCurrentThought] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { isSubscribed, openPurchaseModal } = usePoints();
 
@@ -52,12 +54,13 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
   }, [i18n.language, t]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!autoScrollEnabled || !scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isThinking, currentThought, isOpen]);
+  }, [messages, isThinking, currentThought, isOpen, autoScrollEnabled]);
 
   // Focus input when opened
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
     const userMsg: Message = { role: 'user', text: input.trim(), timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setAutoScrollEnabled(true);
     setIsThinking(true);
     setCurrentThought(''); // Changed from '正在思考中...'
 
@@ -108,6 +112,12 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    }
+  };
+
+  const handleUserScrollIntent = () => {
+    if (isThinking && autoScrollEnabled) {
+      setAutoScrollEnabled(false);
     }
   };
 
@@ -190,7 +200,12 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
 
 
           {/* Chat Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50/80 scroll-smooth">
+          <div
+            ref={scrollContainerRef}
+            onWheel={handleUserScrollIntent}
+            onTouchStart={handleUserScrollIntent}
+            className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50/80 scroll-smooth"
+          >
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -276,7 +291,6 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t('assistant.placeholder')}
-                disabled={isThinking}
                 className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none resize-none h-[52px] max-h-32 min-h-[52px] [&::-webkit-scrollbar]:hidden"
               />
               <button

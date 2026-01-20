@@ -56,6 +56,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   } = useTripDetail(trip);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isReshaping, setIsReshaping] = useState(false);
 
   // Attraction Explorer State
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
@@ -124,8 +125,24 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     }
 
     // 4b. 風險低或檢查通過 -> 直接更新
-    onUpdateTrip(trip.id, result.updatedData);
+    setIsReshaping(true);
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      onUpdateTrip(trip.id, result.updatedData);
+    } finally {
+      setIsReshaping(false);
+    }
     return result.responseText;
+  };
+
+  const handleFeasibilityConfirmWithReshape = async () => {
+    setIsReshaping(true);
+    try {
+      await new Promise(r => setTimeout(r, 300));
+      await handleFeasibilityConfirm();
+    } finally {
+      setIsReshaping(false);
+    }
   };
 
   // Handler for Explorer Confirmation
@@ -263,7 +280,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     const city = trip.input.destination.split(',')[0].trim();
     // Add timestamp to ensure uniqueness in React state even if keyword repeats
     const timestamp = Date.now();
-    const newUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1280&h=720&c=7&rs=1&p=0&t=${timestamp}`;
+    const newUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=0&t=${timestamp}`;
 
     onUpdateTripMeta({ customCoverImage: newUrl });
   };
@@ -284,12 +301,12 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           isOpen={!!feasibilityResult}
           result={feasibilityResult}
           onCancel={handleFeasibilityCancel}
-          onProceed={handleFeasibilityConfirm}
+          onProceed={handleFeasibilityConfirmWithReshape}
         />
       )}
 
       {/* Global Loading Overlay for Explorer Update or Checking */}
-      {(isUpdatingFromExplorer || isCheckingFeasibility) && (
+      {(isUpdatingFromExplorer || isCheckingFeasibility || isReshaping) && (
         <div className="absolute inset-0 z-[70] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
           <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 flex flex-col items-center max-w-sm text-center">
             <div className="relative mb-4">
