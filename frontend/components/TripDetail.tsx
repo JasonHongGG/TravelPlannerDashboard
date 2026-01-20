@@ -271,7 +271,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     }
   };
 
-  const handleRandomizeCover = () => {
+  const handleRandomizeCover = async () => {
     if (!onUpdateTripMeta) return;
 
     // Expanded list of keywords for variety
@@ -280,9 +280,22 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     const city = trip.input.destination.split(',')[0].trim();
     // Add timestamp to ensure uniqueness in React state even if keyword repeats
     const timestamp = Date.now();
-    const newUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=0&t=${timestamp}`;
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
-    onUpdateTripMeta({ customCoverImage: newUrl });
+    try {
+      const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(city + ' ' + randomKeyword)}&t=${timestamp}`);
+      if (!response.ok) throw new Error('Failed to fetch cover');
+      const data = await response.json();
+      if (data?.url) {
+        onUpdateTripMeta({ customCoverImage: data.url });
+        return;
+      }
+    } catch (e) {
+      console.warn('Cover lookup failed, falling back to Bing thumbnail', e);
+    }
+
+    const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=0&t=${timestamp}`;
+    onUpdateTripMeta({ customCoverImage: fallbackUrl });
   };
 
   return (
