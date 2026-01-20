@@ -16,6 +16,7 @@ interface User {
 
 interface AuthContextType {
     user: User | null;
+    isLoading: boolean;
     login: (token: string) => Promise<void>;
     logout: () => void;
 }
@@ -24,6 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Check for saved token on mount
@@ -33,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const decoded: any = jwtDecode(token);
                 if (decoded?.exp && Date.now() >= decoded.exp * 1000) {
                     localStorage.removeItem('google_auth_token');
+                    setIsLoading(false);
                     return;
                 }
                 // Sync with DB Server to get latest state
@@ -50,18 +53,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             if (userData.error.includes('Token')) {
                                 localStorage.removeItem('google_auth_token');
                             }
+                            setIsLoading(false);
                             return;
                         }
                         setUser(userData);
+                        setIsLoading(false);
                     })
                     .catch(e => {
                         console.error("Auth sync failed", e);
                         // Optional: logout if server unreachable? For now keep local session but APIs might fail.
+                        setIsLoading(false);
                     });
             } catch (e) {
                 console.error("Invalid token found", e);
                 localStorage.removeItem('google_auth_token');
+                setIsLoading(false);
             }
+        } else {
+            setIsLoading(false);
         }
     }, []);
 
@@ -98,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
