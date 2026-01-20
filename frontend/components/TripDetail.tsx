@@ -1,14 +1,15 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Trip, TripData, TripMeta, TripStop, Message, FeasibilityResult } from '../types';
+import React, { useState, useRef } from 'react';
+import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
 import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle } from 'lucide-react';
 import Assistant from './Assistant';
 import { aiService } from '../services'; // Import singleton service
 import { safeRender } from '../utils/formatters';
-import { getDayMapConfig } from '../utils/mapHelpers';
+import { useTripDetail } from '../hooks/useTripDetail';
 import { getTripCover } from '../utils/tripUtils';
 
 import { useTranslation } from 'react-i18next';
+import { useFeasibilityCheck } from '../hooks/useFeasibilityCheck';
 
 // Sub-components
 import DaySelector from './trip/DaySelector';
@@ -41,9 +42,18 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     }
   };
 
-  const [selectedDay, setSelectedDay] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'budget' | 'risks'>('itinerary');
-  const [isMapOpen, setIsMapOpen] = useState(true); // State to toggle map visibility
+  const {
+    selectedDay,
+    setSelectedDay,
+    activeTab,
+    setActiveTab,
+    isMapOpen,
+    setIsMapOpen,
+    mapState,
+    setMapState,
+    handleResetMap,
+    handleFocusStop
+  } = useTripDetail(trip);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,102 +62,20 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   const [isUpdatingFromExplorer, setIsUpdatingFromExplorer] = useState(false);
 
   // Feasibility Check State
-  const [isCheckingFeasibility, setIsCheckingFeasibility] = useState(false);
-  const [feasibilityResult, setFeasibilityResult] = useState<FeasibilityResult | null>(null);
-
-  // Pending Actions/Data
-  // pendingUpdateAction: 用於 Explorer (尚未生成，等待執行生成函數)
-  const [pendingUpdateAction, setPendingUpdateAction] = useState<(() => Promise<void>) | null>(null);
-  // pendingNewData: 用於 Chat (已生成資料，等待確認寫入)
-  const [pendingNewData, setPendingNewData] = useState<TripData | null>(null);
-
-  // State for Map URL and Label
-  const [mapState, setMapState] = useState<{ url: string; label: string }>({
-    url: '',
-    label: ''
+  const {
+    isCheckingFeasibility,
+    feasibilityResult,
+    performFeasibilityCheck,
+    setChatPendingUpdate,
+    handleFeasibilityConfirm,
+    handleFeasibilityCancel
+  } = useFeasibilityCheck({
+    trip,
+    onUpdateTrip,
+    userEmail: user?.email,
+    language: getPromptLanguage(i18n.language),
+    onCancelExplorer: () => setIsUpdatingFromExplorer(false)
   });
-
-  // Effect: Update map when day changes
-  useEffect(() => {
-    const days = trip.data?.days || [];
-    const day = days.find(d => d.day === selectedDay);
-    const config = getDayMapConfig(day, trip.input.destination);
-    setMapState(config);
-  }, [selectedDay, trip.data, trip.input.destination]);
-
-  // Handler: Reset Map to Full Route
-  const handleResetMap = () => {
-    const days = trip.data?.days || [];
-    const day = days.find(d => d.day === selectedDay);
-    const config = getDayMapConfig(day, trip.input.destination);
-    setMapState(config);
-  };
-
-  // Handler: Focus on a specific stop
-  const handleFocusStop = (stop: TripStop) => {
-    const city = trip.input.destination;
-    const query = `${stop.name}, ${city}`;
-    setMapState({
-      url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
-      label: `📍 ${stop.name}`
-    });
-    // If map is closed when focusing, open it
-    if (!isMapOpen) {
-      setIsMapOpen(true);
-    }
-  };
-
-  // Helper to execute check (Used by Explorer)
-  const performFeasibilityCheck = async (context: string, executeIfSafe: () => Promise<void>) => {
-    if (!trip.data) return;
-
-    setIsCheckingFeasibility(true);
-    try {
-      // For Explorer, we check against the CURRENT data because the new data doesn't exist yet
-      const lang = getPromptLanguage(i18n.language);
-      // Pass user credentials!
-      const result = await aiService.checkFeasibility(trip.data, context, user?.email, lang);
-
-      // CRITICAL: Turn off feasibility loading state BEFORE executing the update.
-      // Otherwise "Evaluating..." overrides "Reshaping..." in the UI because both flags would be true.
-      setIsCheckingFeasibility(false);
-
-      if (!result.feasible || result.riskLevel === 'high' || result.riskLevel === 'moderate') {
-        setFeasibilityResult(result);
-        setPendingUpdateAction(() => executeIfSafe);
-      } else {
-        // Safe enough, proceed directly
-        await executeIfSafe();
-      }
-    } catch (e) {
-      console.error("Check failed", e);
-      setIsCheckingFeasibility(false);
-      await executeIfSafe();
-    }
-  };
-
-  const handleFeasibilityConfirm = async () => {
-    // Case 1: Explorer (Action waiting to be executed)
-    if (pendingUpdateAction) {
-      await pendingUpdateAction();
-    }
-
-    // Case 2: Chat (Data waiting to be applied)
-    if (pendingNewData) {
-      onUpdateTrip(trip.id, pendingNewData);
-    }
-
-    setFeasibilityResult(null);
-    setPendingUpdateAction(null);
-    setPendingNewData(null);
-  };
-
-  const handleFeasibilityCancel = () => {
-    setFeasibilityResult(null);
-    setPendingUpdateAction(null);
-    setPendingNewData(null);
-    setIsUpdatingFromExplorer(false); // Ensure loading overlay is cleared
-  };
 
 
   // AI Update Handler (Used by Assistant)
@@ -183,8 +111,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
 
       if (!checkResult.feasible || checkResult.riskLevel === 'high') {
         // 4a. 風險高 -> 顯示 Modal，暫存數據 (pendingNewData)
-        setFeasibilityResult(checkResult);
-        setPendingNewData(result.updatedData);
+        setChatPendingUpdate(checkResult, result.updatedData);
 
         // 我們仍回傳 AI 的文字回應，讓對話框顯示「好的，我已為您安排...」
         // 但實際上 UI 尚未更新，直到用戶在 Modal 點擊確認

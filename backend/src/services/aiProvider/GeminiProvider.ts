@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { IAIProvider, TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "./aiProvider";
 import {
@@ -8,8 +7,8 @@ import {
     constructRecommendationPrompt,
     constructFeasibilityPrompt,
     constructExplorerUpdatePrompt
-} from "../config/aiConfig";
-import { SERVICE_CONFIG } from "../config/serviceConfig";
+} from "../../config/aiConfig";
+import { SERVICE_CONFIG } from "../../config/serviceConfig";
 
 export class GeminiProvider implements IAIProvider {
     private getClient() {
@@ -66,9 +65,8 @@ export class GeminiProvider implements IAIProvider {
 
     async generateTrip(input: TripInput, userId?: string, apiSecret?: string): Promise<TripData> {
         const ai = this.getClient();
-        const prompt = constructTripPrompt(input); // Using backend config
+        const prompt = constructTripPrompt(input);
 
-        // No retry logic for simplicity in V1 port, can add later
         const response = await ai.models.generateContent({
             model: SERVICE_CONFIG.gemini.models.tripGenerator,
             contents: prompt,
@@ -106,7 +104,7 @@ export class GeminiProvider implements IAIProvider {
         const delimiter = "___UPDATE_JSON___";
 
         for await (const chunk of responseStream) {
-            const text = chunk.text; // Google GenAI SDK stream text method
+            const text = chunk.text;
 
             if (!isJsonMode) {
                 fullText += text;
@@ -115,11 +113,7 @@ export class GeminiProvider implements IAIProvider {
                 if (delimiterIndex !== -1) {
                     isJsonMode = true;
                     const thoughtPart = fullText.substring(0, delimiterIndex);
-                    // if (onThought) onThought(thoughtPart); // Backend streaming is different, we handled via SSE in server.ts
-                    // For Provider, we might just return the stream? 
-                    // Refactor: Provider should probably return a ReadableStream or accept a callback?
-                    // The interface accepts 'onThought', which the caller (server) can use to pipe to SSE.
-                    if (onThought) onThought(thoughtPart); // This might be duplicate thought? No, this is incremental.
+                    if (onThought) onThought(thoughtPart);
                     jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
                 } else {
                     if (onThought && text) onThought(text);

@@ -1,15 +1,11 @@
-
 import { IAIProvider, TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "./aiProvider";
-import { SERVICE_CONFIG } from "../config/serviceConfig";
+import { SERVICE_CONFIG } from "../../config/serviceConfig";
 
 // Provider for Custom Local API
 export class LocalApiProvider implements IAIProvider {
     private baseUrl: string;
 
     constructor() {
-        // SERVICE_CONFIG.local_api.baseUrl might be relative '/local-api' if it was designed for frontend proxy.
-        // If running on backend, we need the absolute URL. 
-        // We'll assume if it starts with /, it needs a host prefix (e.g. from env or default python server port 8000).
         let url = SERVICE_CONFIG.local_api.baseUrl;
         if (url.startsWith('/')) {
             url = `http://localhost:8000${url}`;
@@ -37,9 +33,6 @@ export class LocalApiProvider implements IAIProvider {
     }
 
     async generateTrip(input: TripInput, userId?: string, apiSecret?: string): Promise<TripData> {
-        // Assume Local API has a /generate endpoint matching our needs
-        // Logic depends on the external Local API implementation. 
-        // For now, mirroring the standard payload structure.
         const result = await this.callApi('/generate', {
             input,
             model: SERVICE_CONFIG.local_api.models.tripGenerator
@@ -55,8 +48,6 @@ export class LocalApiProvider implements IAIProvider {
         apiSecret?: string,
         language?: string
     ): Promise<UpdateResult> {
-        // Streaming support? Local API might stream.
-        // For simple implementation, assuming non-streaming first or standard text response.
         const result = await this.callApi('/update', {
             currentData,
             history,

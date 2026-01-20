@@ -5,8 +5,8 @@
     "type": "module",
     "main": "src/index.ts",
     "scripts": {
-        "db": "tsx src/db-server.ts",
-        "copilot": "tsx src/copilot-server.ts",
+        "db": "tsx src/dbServer.ts",
+        "copilot": "tsx src/copilotServer.ts",
         "server": "tsx src/server.ts",
         "install-deps": "npm install"
     },

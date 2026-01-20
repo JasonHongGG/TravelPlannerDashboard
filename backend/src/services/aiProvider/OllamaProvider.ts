@@ -1,4 +1,3 @@
-
 import { IAIProvider, TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "./aiProvider";
 import {
     SYSTEM_INSTRUCTION,
@@ -7,8 +6,8 @@ import {
     constructRecommendationPrompt,
     constructFeasibilityPrompt,
     constructExplorerUpdatePrompt
-} from "../config/aiConfig";
-import { SERVICE_CONFIG } from "../config/serviceConfig";
+} from "../../config/aiConfig";
+import { SERVICE_CONFIG } from "../../config/serviceConfig";
 
 export class OllamaProvider implements IAIProvider {
     private baseUrl: string;
@@ -121,12 +120,7 @@ export class OllamaProvider implements IAIProvider {
         try {
             const response = await this.callOllama(messages, SERVICE_CONFIG.ollama.models.tripUpdater, 'json', true);
 
-            // Node-fetch body is a readable stream but typing can be weird. 
-            // In Node environment, response.body is a NodeJS.ReadableStream
             if (!response.body) throw new Error("Failed to read Ollama stream");
-
-            // We need a way to read lines from the node stream
-            // Since this is backend (Node), we can use 'readline' or simple chunk processing
 
             const decoder = new TextDecoder();
             let fullText = "";
@@ -134,7 +128,6 @@ export class OllamaProvider implements IAIProvider {
             let jsonBuffer = "";
             const delimiter = "___UPDATE_JSON___";
 
-            // Manual chunk reading for Node Fetch stream
             // @ts-ignore
             for await (const chunk of response.body) {
                 const chunkStr = decoder.decode(chunk as Buffer);
@@ -154,12 +147,7 @@ export class OllamaProvider implements IAIProvider {
                             if (delimiterIndex !== -1) {
                                 isJsonMode = true;
                                 const thoughtPart = fullText.substring(0, delimiterIndex);
-                                if (onThought) onThought(thoughtPart); // This might resend previous thought parts if we are not careful? 
-                                // Actually, fullText accumulates. We should ideally send only *new* thought. 
-                                // But looking at previous implementation, it seems to assume 'onThought' handles full or partial updates. 
-                                // The previous implementation: if (onThought) onThought(thoughtPart); -> Sends the WHOLE thought so far.
-                                // The Frontend (CopilotService) expected incremental typed chars, but backend stream-update handles that.
-                                // For now, let's keep it simple: send accumulated thought.
+                                if (onThought) onThought(thoughtPart);
                                 jsonBuffer = fullText.substring(delimiterIndex + delimiter.length);
                             } else {
                                 if (onThought) onThought(fullText);

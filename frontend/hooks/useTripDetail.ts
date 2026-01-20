@@ -1,0 +1,52 @@
+import { useEffect, useState } from 'react';
+import { Trip, TripStop } from '../types';
+import { getDayMapConfig } from '../utils/mapHelpers';
+
+export const useTripDetail = (trip: Trip) => {
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'budget' | 'risks'>('itinerary');
+  const [isMapOpen, setIsMapOpen] = useState(true);
+  const [mapState, setMapState] = useState<{ url: string; label: string }>({
+    url: '',
+    label: ''
+  });
+
+  useEffect(() => {
+    const days = trip.data?.days || [];
+    const day = days.find(d => d.day === selectedDay);
+    const config = getDayMapConfig(day, trip.input.destination);
+    setMapState(config);
+  }, [selectedDay, trip.data, trip.input.destination]);
+
+  const handleResetMap = () => {
+    const days = trip.data?.days || [];
+    const day = days.find(d => d.day === selectedDay);
+    const config = getDayMapConfig(day, trip.input.destination);
+    setMapState(config);
+  };
+
+  const handleFocusStop = (stop: TripStop) => {
+    const city = trip.input.destination;
+    const query = `${stop.name}, ${city}`;
+    setMapState({
+      url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
+      label: `📍 ${stop.name}`
+    });
+    if (!isMapOpen) {
+      setIsMapOpen(true);
+    }
+  };
+
+  return {
+    selectedDay,
+    setSelectedDay,
+    activeTab,
+    setActiveTab,
+    isMapOpen,
+    setIsMapOpen,
+    mapState,
+    setMapState,
+    handleResetMap,
+    handleFocusStop
+  };
+};

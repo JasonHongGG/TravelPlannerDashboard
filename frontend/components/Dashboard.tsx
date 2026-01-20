@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Trip } from '../types';
-import { getTripCover } from '../utils/tripUtils';
 import UserProfileMenu from './UserProfileMenu';
 import LanguageSwitcher from './LanguageSwitcher';
-import { Plus, Map, Loader2, Calendar, Users, Trash2, Download, Upload, MapPin, ArrowRight, MoreHorizontal, Clock, Sparkles, Check, RefreshCw } from 'lucide-react';
+import { Plus, Map, Upload, ArrowRight, MoreHorizontal, Clock, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import TripCard from './dashboard/TripCard';
 
 interface Props {
   trips: Trip[];
@@ -15,173 +15,6 @@ interface Props {
   onImportTrip: (trip: Trip) => void;
   onRetryTrip: (tripId: string) => void;
 }
-
-// ==========================================
-// Sub-components
-// ==========================================
-
-// Live Timer for generating status
-const LiveTimer = ({ startTime }: { startTime: number }) => {
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  useEffect(() => {
-    setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-    const interval = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [startTime]);
-
-  return <span className="tabular-nums">{elapsedSeconds}s</span>;
-};
-
-// Robust Delete Button with confirmation
-const DeleteButton = ({ onDelete }: { onDelete: () => void }) => {
-  const [confirming, setConfirming] = useState(false);
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    if (confirming) {
-      const timer = setTimeout(() => setConfirming(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [confirming]);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (confirming) {
-      onDelete();
-    } else {
-      setConfirming(true);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className={`p-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${confirming
-        ? 'bg-red-50 text-red-600 ring-1 ring-red-200 px-3'
-        : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-        }`}
-      title={confirming ? t('dashboard.confirm_delete_tooltip') : t('dashboard.delete_trip')}
-    >
-      <Trash2 className="w-4 h-4" />
-      {confirming && <span className="text-[10px] font-bold">{t('dashboard.confirm_delete_text')}</span>}
-    </button>
-  );
-};
-
-interface TripCardProps {
-  trip: Trip;
-  onSelect: () => void;
-  onDelete: () => void;
-  onExport: (e: React.MouseEvent) => void;
-  onRetry: (e: React.MouseEvent) => void;
-}
-
-// New Trip Card Component
-const TripCard: React.FC<TripCardProps> = ({ trip, onSelect, onDelete, onExport, onRetry }) => {
-  const { t } = useTranslation();
-  // Generate a cover image based on destination
-  const imageUrl = getTripCover(trip);
-
-  return (
-    <div
-      onClick={onSelect}
-      className="group relative bg-white rounded-xl shadow-sm hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 flex flex-col h-full cursor-pointer hover:-translate-y-1"
-    >
-      {/* Image Cover - Aspect Ratio 16:9 */}
-      <div className="relative aspect-video bg-gray-200 overflow-hidden">
-        <img
-          src={imageUrl}
-          alt={trip.title}
-          loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          onError={(e) => {
-            e.currentTarget.src = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80';
-          }}
-        />
-
-        {/* Gradient Overlay for text protection if needed, or status */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
-
-        {/* Status Badge */}
-        <div className="absolute top-3 right-3 flex gap-2">
-          {trip.status === 'generating' && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-brand-600 backdrop-blur-md shadow-sm">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              {t('dashboard.status_generating')} <LiveTimer startTime={trip.createdAt} />
-            </span>
-          )}
-          {trip.status === 'complete' && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-white/90 text-green-600 backdrop-blur-md shadow-sm animate-in fade-in zoom-in">
-              <Check className="w-3 h-3" />
-              {t('dashboard.status_complete')} {trip.generationTimeMs ? (trip.generationTimeMs / 1000).toFixed(1) : 0}s
-            </span>
-          )}
-          {trip.status === 'error' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRetry(e);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-red-500 text-white shadow-sm hover:bg-red-600 transition-colors z-10 cursor-pointer"
-            >
-              <RefreshCw className="w-3 h-3" />
-              {t('dashboard.status_failed')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Content Body */}
-      <div className="p-5 flex-1 flex flex-col">
-        <div className="mb-3">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-lg font-bold text-gray-900 leading-snug line-clamp-1 group-hover:text-brand-600 transition-colors">
-              {trip.title || trip.input.destination}
-            </h3>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mt-1">
-            <MapPin className="w-3.5 h-3.5 text-gray-400" />
-            <span className="truncate">{trip.input.destination}</span>
-          </div>
-        </div>
-
-        {/* Tags / Pills */}
-        <div className="flex flex-wrap gap-2 mt-auto pt-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-xs font-medium text-gray-600 border border-gray-100 group-hover:bg-brand-50/50 group-hover:border-brand-100 transition-colors">
-            <Calendar className="w-3.5 h-3.5 text-gray-400 group-hover:text-brand-400" />
-            {trip.input.dateRange}
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-50 text-xs font-medium text-gray-600 border border-gray-100 group-hover:bg-brand-50/50 group-hover:border-brand-100 transition-colors">
-            <Users className="w-3.5 h-3.5 text-gray-400 group-hover:text-brand-400" />
-            {trip.input.travelers}
-          </span>
-        </div>
-      </div>
-
-      {/* Footer / Actions */}
-      <div className="px-4 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-        <span className="text-[10px] text-gray-400 font-medium font-mono">
-          {new Date(trip.createdAt).toLocaleDateString()}
-        </span>
-
-        <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onExport}
-            className="p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors"
-            title={t('dashboard.export_backup')}
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <DeleteButton onDelete={onDelete} />
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ==========================================
 // Main Component

@@ -1,7 +1,4 @@
-
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
+import type { Request, Response } from 'express';
 import { CopilotClient } from "@github/copilot-sdk";
 import path from 'path';
 import {
@@ -11,14 +8,8 @@ import {
     constructFeasibilityPrompt,
     constructExplorerUpdatePrompt,
     SYSTEM_INSTRUCTION
-} from "./config/aiConfig";
-import { SERVICE_CONFIG } from "./config/serviceConfig";
-
-const app = express();
-const port = process.env.COPILOT_SERVER_PORT || 3003;
-
-app.use(cors());
-app.use(express.json());
+} from "../config/aiConfig";
+import { SERVICE_CONFIG } from "../config/serviceConfig";
 
 // Copilot Client Setup
 const binPath = path.join(process.cwd(), 'node_modules', '.bin');
@@ -55,7 +46,7 @@ async function ensureClient() {
     return client;
 }
 
-app.post('/process', async (req, res) => {
+export async function processCopilot(req: Request, res: Response) {
     try {
         const { action, tripInput, currentData, history, language, location, interests, category, excludeNames, modificationContext, dayIndex, newMustVisit, newAvoid, keepExisting, removeExisting } = req.body;
 
@@ -63,9 +54,8 @@ app.post('/process', async (req, res) => {
         const activeClient = await ensureClient();
 
         let prompt = "";
-        let model = 'gpt-4o'; // Default
+        let model = 'gpt-4o';
 
-        // Select Prompt & Model based on Action & Config
         switch (action) {
             case 'GENERATE_TRIP':
                 console.log(`[Copilot Server] Generating Trip: ${tripInput.destination}`);
@@ -85,7 +75,7 @@ app.post('/process', async (req, res) => {
             case 'CHECK_FEASIBILITY':
                 console.log(`[Copilot Server] Checking Feasibility: ${currentData.tripMeta.destination}`);
                 prompt = constructFeasibilityPrompt(currentData, modificationContext, language);
-                model = SERVICE_CONFIG.copilot.models.recommender; // Reuse recommender model
+                model = SERVICE_CONFIG.copilot.models.recommender;
                 break;
             case 'EXPLORER_UPDATE':
                 console.log(`[Copilot Server] Updating Explorer: ${currentData.tripMeta.destination}`);
@@ -97,62 +87,36 @@ app.post('/process', async (req, res) => {
         }
 
         const session = await activeClient.createSession({ model });
-
-        // Stream response
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        const response = await (session as any).send({
+            systemPrompt: SYSTEM_INSTRUCTION,
+            userPrompt: prompt
+        });
 
         let fullResponse = "";
-        const unsubscribe = session.on((event) => {
-            console.log(`[Copilot Server] Event: ${event.type}`); // DEBUG LOG
-            if (event.type === "assistant.message_delta") {
-                fullResponse += event.data.deltaContent;
-                res.write(`data: ${JSON.stringify({ chunk: event.data.deltaContent })}\n\n`);
-            } else if (event.type === "assistant.message") {
-                // Full content update
+
+        for await (const event of response as AsyncIterable<any>) {
+            console.log(`[Copilot Server] Event: ${event.type}`);
+
+            if (event.type === 'message' && event.message?.content?.length) {
+                const candidate = event.message.content.find((c: any) => c.type === 'text')?.text;
+
                 console.log("[Copilot Server] Full Message Event Keys:", Object.keys(event));
                 console.log("[Copilot Server] Full Message Event Data:", JSON.stringify(event, null, 2));
+                console.log("[Copilot Server] Extracted Candidate:", typeof candidate, candidate ? candidate.substring(0, 50) : "null");
 
-                if (!fullResponse) {
-                    // Try all possible locations
-                    const candidate = (event as any).message?.content || (event as any).content || (event as any).data?.content || (event as any).data;
-                    console.log("[Copilot Server] Extracted Candidate:", typeof candidate, candidate ? candidate.substring(0, 50) : "null");
-
-                    if (candidate && typeof candidate === 'string') {
-                        fullResponse = candidate;
-                        res.write(`data: ${JSON.stringify({ chunk: candidate })}\n\n`);
-                    }
+                if (candidate) {
+                    fullResponse += candidate;
+                    res.write(`data: ${JSON.stringify({ type: 'chunk', text: candidate })}\n\n`);
                 }
-            } else if (event.type === "session.idle") {
-                console.log("[Copilot Server] Output Preview:", fullResponse.substring(0, 200).replace(/\n/g, ' '));
-                unsubscribe();
-                res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-                res.end();
             }
-        });
+        }
 
-        console.log(`[Copilot Server] Sending Prompt (${prompt.length} chars) with System Instruction...`);
-        // Send system instruction and prompt together if possible, or sequentially
-        // Note: The SDK might not support 'system' role directly in 'send'. 
-        // We will prepend it to the prompt as a fallback or use multiple messages.
-        // Looking at the SDK, it typically handles history management. 
-        // Best approach finding: Prepend to the User Prompt if 'system' role isn't explicit in .send()
-
-        const finalPrompt = `${SYSTEM_INSTRUCTION}\n\n${prompt}`;
-
-        session.send({ prompt: finalPrompt }).catch(err => {
-            unsubscribe();
-            res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-            res.end();
-        });
+        console.log("[Copilot Server] Output Preview:", fullResponse.substring(0, 200).replace(/\n/g, ' '));
+        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+        res.end();
 
     } catch (e: any) {
         console.error("[Copilot Server] Error:", e);
-        if (!res.headersSent) res.status(500).json({ error: e.message });
+        res.status(500).json({ error: e.message || 'Copilot server error' });
     }
-});
-
-app.listen(port, () => {
-    console.log(`Copilot Dedicated Server running on http://localhost:${port}`);
-});
+}

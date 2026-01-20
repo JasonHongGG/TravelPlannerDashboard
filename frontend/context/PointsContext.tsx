@@ -1,8 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { db } from '../services/database/Database';
-import { Transaction } from '../services/database/models/UserModel';
+import { addUserPoints, activateUserSubscription, getUserProfile, Transaction } from '../services/database/userService';
 
 interface PointPackage {
     id: string;
@@ -57,7 +56,7 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (user?.email) {
                 // setIsLoading(true); // Don't block whole UI, just profile loading
                 try {
-                    const userProfile = await db.users.getProfile(user.email);
+                    const userProfile = await getUserProfile(user.email);
                     if (userProfile) {
                         setBalance(userProfile.points);
                         setTransactions(userProfile.transactions || []);
@@ -130,11 +129,11 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 let updatedUser;
                 if (pkg.type === 'subscription') {
                     // Activate Subscription
-                    updatedUser = await db.users.activateSubscription(user.email, pkg.id);
+                    updatedUser = await activateUserSubscription(user.email, pkg.id);
                     setIsSubscribed(true);
                 } else {
                     // Add Points
-                    updatedUser = await db.users.addPoints(user.email, pkg.points, `購買 ${pkg.name} 方案`);
+                    updatedUser = await addUserPoints(user.email, pkg.points, `購買 ${pkg.name} 方案`);
                     setBalance(updatedUser.points);
                 }
 
@@ -160,7 +159,7 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!isSubscribed && balance < amount) return false;
 
         try {
-            const updatedUser = await db.users.addPoints(user.email, -amount, description);
+            const updatedUser = await addUserPoints(user.email, -amount, description);
             setBalance(updatedUser.points);
             setTransactions(updatedUser.transactions);
             return true;

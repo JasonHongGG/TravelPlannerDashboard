@@ -1,6 +1,5 @@
-
 import { IAIProvider, TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "./aiProvider";
-import { SERVICE_CONFIG } from "../config/serviceConfig";
+import { SERVICE_CONFIG } from "../../config/serviceConfig";
 
 const COPILOT_SERVER_URL = process.env.COPILOT_SERVER_URL || "http://localhost:3003/process";
 

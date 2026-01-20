@@ -1,4 +1,5 @@
 import { TripInput, TripData, Message, AttractionRecommendation, FeasibilityResult, UpdateResult } from "../types";
+import { parseErrorResponse } from "./http/parseError";
 
 
 const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
@@ -70,8 +71,7 @@ export class TravelAIService {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(err.error || `Server error: ${response.status}`);
+            throw await parseErrorResponse(response, 'Server error');
         }
 
         if (!response.body) {
@@ -130,8 +130,7 @@ export class TravelAIService {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(err.error || `Server error: ${response.status}`);
+            throw await parseErrorResponse(response, 'Server error');
         }
 
         const data = await response.json();
@@ -186,8 +185,7 @@ export class TravelAIService {
         });
 
         if (!response.ok) {
-            const err = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(err.error || `Server error: ${response.status}`);
+            throw await parseErrorResponse(response, 'Server error');
         }
 
         if (!response.body) {

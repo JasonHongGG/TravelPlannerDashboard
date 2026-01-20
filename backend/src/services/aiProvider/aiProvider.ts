@@ -1,5 +1,4 @@
-
-import { TripData, TripInput, Message, AttractionRecommendation, FeasibilityResult } from "../types";
+import { TripData, TripInput, Message, AttractionRecommendation, FeasibilityResult } from "../../types";
 
 export type { TripData, TripInput, Message, AttractionRecommendation, FeasibilityResult };
 

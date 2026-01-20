@@ -1,9 +1,9 @@
 
-import { IAIProvider } from "./aiProvider";
-import { GeminiProvider } from "./GeminiProvider";
-import { OllamaProvider } from "./OllamaProvider";
-import { CopilotProvider } from "./CopilotProvider";
-import { LocalApiProvider } from "./LocalApiProvider";
+import { IAIProvider } from "./aiProvider/aiProvider";
+import { GeminiProvider } from "./aiProvider/GeminiProvider";
+import { OllamaProvider } from "./aiProvider/OllamaProvider";
+import { CopilotProvider } from "./aiProvider/CopilotProvider";
+import { LocalApiProvider } from "./aiProvider/LocalApiProvider";
 
 // Determine provider from Env or Config
 // For now, let's use process.env.AI_PROVIDER || 'copilot'
