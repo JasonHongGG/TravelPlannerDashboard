@@ -46,8 +46,8 @@ export default function UserProfileMenu() {
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
 
-                <div className="flex flex-col items-start mr-1 hidden sm:flex">
-                    <span className="text-xs font-bold text-gray-700 leading-tight">{user.name}</span>
+                <div className="flex flex-col items-start mr-1 hidden sm:flex w-[50px]">
+                    <span className="text-xs font-bold text-gray-700 leading-tight truncate w-full" title={user.name}>{user.name}</span>
                     {isSubscribed ? (
                         <span className="text-[10px] font-bold text-purple-600 flex items-center gap-1">
                             <Sparkles className="w-3 h-3" /> PRO
