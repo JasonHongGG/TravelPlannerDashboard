@@ -99,21 +99,44 @@ export default function SharedTripView({ tripId, onBack }: SharedTripViewProps) 
         );
     }
 
-    // No Permission State
+    // No Permission State (Refined Full Page)
     if (viewState === 'no-permission') {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 text-center">
-                <div className="bg-amber-100 p-4 rounded-full mb-4">
-                    <Lock className="w-12 h-12 text-amber-600" />
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white text-center px-6">
+
+                {/* Visual Icon Group */}
+                <div className="relative mb-10 animate-in fade-in zoom-in-50 duration-700">
+                    <div className="absolute inset-0 bg-gray-200/50 blur-3xl rounded-full scale-150 transform translate-y-4" />
+                    <div className="relative bg-white w-28 h-28 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex items-center justify-center border border-gray-100 rotate-3 transition-transform hover:rotate-0 duration-500">
+                        <Lock className="w-12 h-12 text-gray-900" strokeWidth={1.5} />
+                    </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">無法存取此行程</h2>
-                <p className="text-gray-600 max-w-md mb-8">{errorMessage}</p>
-                <button
-                    onClick={onBack}
-                    className="px-6 py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 transition-colors shadow-lg shadow-brand-200"
-                >
-                    返回首頁
-                </button>
+
+                <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+                    <h2 className="text-4xl font-bold text-gray-900 tracking-tight">
+                        無需擔憂，此為私人行程
+                    </h2>
+
+                    <p className="text-lg text-gray-500 leading-relaxed">
+                        您目前嘗試存取的行程設定為<span className="font-semibold text-gray-900 mx-1">私人模式</span>，<br className="hidden md:block" />
+                        或者是分享連結已經過期失效。
+                    </p>
+
+                    <div className="pt-8 flex justify-center">
+                        <button
+                            onClick={onBack}
+                            className="group flex items-center gap-2 px-8 py-3.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-black hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-gray-200"
+                        >
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            <span>返回首頁探索</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Footer simple branding */}
+                <div className="absolute bottom-10 text-xs font-semibold text-gray-300 tracking-[0.2em] uppercase">
+                    Travel Planner
+                </div>
             </div>
         );
     }
