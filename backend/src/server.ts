@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { BackendAIService } from './services/BackendAIService';
 import apiRoutes from './routes/apiRoutes';
+import tripShareRoutes from './routes/tripShareRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { configService } from './config/configService';
 import { corsOptions } from './config/corsConfig';
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/', apiRoutes);
+app.use('/api', tripShareRoutes);
 
 app.use(errorHandler);
 

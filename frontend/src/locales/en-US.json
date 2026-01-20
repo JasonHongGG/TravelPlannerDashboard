@@ -142,6 +142,7 @@
         "cover": {
             "change": "Change Cover",
             "reset": "Reset Default",
+            "random": "Random Cover",
             "uploading": "Uploading..."
         }
     },

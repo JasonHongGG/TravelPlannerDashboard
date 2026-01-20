@@ -144,6 +144,7 @@
         "cover": {
             "change": "更換封面",
             "reset": "恢復預設",
+            "random": "隨機封面",
             "uploading": "上傳中..."
         }
     },

@@ -48,3 +48,21 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         return res.status(401).json({ error: 'Invalid auth token.' });
     }
 }
+
+// Optional auth: doesn't require authentication but captures user info if available
+export async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return next(); // Continue without user
+    }
+
+    const token = authHeader.substring('Bearer '.length);
+    try {
+        const user = await verifyIdToken(token);
+        (req as Request & { user?: AuthUser }).user = user;
+    } catch (error) {
+        // Token invalid, continue without user
+        console.warn('[Auth] Optional auth token invalid, continuing anonymously');
+    }
+    return next();
+}

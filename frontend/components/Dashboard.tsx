@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { Trip } from '../types';
 import UserProfileMenu from './UserProfileMenu';
 import LanguageSwitcher from './LanguageSwitcher';
-import { Plus, Map, Upload, ArrowRight, MoreHorizontal, Clock, Sparkles } from 'lucide-react';
+import { Plus, Map, Upload, ArrowRight, MoreHorizontal, Clock, Sparkles, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TripCard from './dashboard/TripCard';
 
@@ -14,13 +14,14 @@ interface Props {
   onDeleteTrip: (id: string) => void;
   onImportTrip: (trip: Trip) => void;
   onRetryTrip: (tripId: string) => void;
+  onOpenGallery?: () => void;
 }
 
 // ==========================================
 // Main Component
 // ==========================================
 
-export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip, onImportTrip, onRetryTrip }: Props) {
+export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip, onImportTrip, onRetryTrip, onOpenGallery }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t, i18n } = useTranslation();
 
@@ -97,6 +98,17 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
                 <Upload className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">{t('dashboard.import')}</span>
               </button>
+
+              {/* Explore Gallery Button */}
+              {onOpenGallery && (
+                <button
+                  onClick={onOpenGallery}
+                  className="inline-flex items-center px-3 py-2 text-sm font-bold text-gray-600 hover:text-brand-600 bg-transparent hover:bg-brand-50 rounded-lg transition-all"
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">探索</span>
+                </button>
+              )}
 
               <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
 

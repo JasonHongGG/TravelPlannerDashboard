@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { Trip, TripData, TripMeta, TripStop, Message } from '../types';
-import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle } from 'lucide-react';
+import { Trip, TripData, TripMeta, TripStop, Message, TripVisibility } from '../types';
+import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle, Share2, Cloud } from 'lucide-react';
 import Assistant from './Assistant';
 import { aiService } from '../services'; // Import singleton service
 import { safeRender } from '../utils/formatters';
@@ -18,6 +18,9 @@ import BudgetView from './trip/BudgetView';
 import TripMap from './trip/TripMap';
 import AttractionExplorer from './AttractionExplorer';
 import FeasibilityModal from './FeasibilityModal';
+import ShareTripModal from './ShareTripModal';
+import VisibilityToggle from './VisibilityToggle';
+import { tripShareService } from '../services/TripShareService';
 
 interface Props {
   trip: Trip;
@@ -61,6 +64,80 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   // Attraction Explorer State
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [isUpdatingFromExplorer, setIsUpdatingFromExplorer] = useState(false);
+
+  // Sharing State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Handle visibility change (private <-> public)
+  const handleVisibilityChange = async (newVisibility: TripVisibility) => {
+    if (!trip.data) return;
+
+    setIsSyncing(true);
+    try {
+      if (newVisibility === 'public') {
+        // Switching to public = auto share (save/update on server)
+        const serverTripId = await tripShareService.saveTrip(trip, 'public');
+        onUpdateTripMeta?.({ serverTripId, visibility: 'public', lastSyncedAt: Date.now() });
+      } else {
+        // Switching to private
+        if (trip.serverTripId) {
+          // Update visibility on server if already shared
+          await tripShareService.updateVisibility(trip.serverTripId, 'private');
+          onUpdateTripMeta?.({ visibility: 'private' });
+        } else {
+          // Just update local state
+          onUpdateTripMeta?.({ visibility: 'private' });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update visibility:', e);
+      alert('更新失敗，請稍後再試');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Handle share toggle (only for private mode)
+  const handleShareToggle = async (shouldShare: boolean) => {
+    if (!trip.data) return;
+
+    setIsSyncing(true);
+    try {
+      if (shouldShare) {
+        // Share: save to server as private
+        const serverTripId = await tripShareService.saveTrip(trip, 'private');
+        onUpdateTripMeta?.({ serverTripId, visibility: 'private', lastSyncedAt: Date.now() });
+      } else {
+        // Unshare: delete from server
+        if (trip.serverTripId) {
+          await tripShareService.deleteServerTrip(trip.serverTripId);
+          onUpdateTripMeta?.({ serverTripId: undefined, lastSyncedAt: undefined });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to toggle share:', e);
+      alert(shouldShare ? '分享失敗，請稍後再試' : '取消分享失敗，請稍後再試');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Handle sync to cloud (update existing server copy)
+  const handleSyncToCloud = async () => {
+    if (!trip.data || !trip.serverTripId) return;
+
+    setIsSyncing(true);
+    try {
+      await tripShareService.saveTrip(trip, trip.visibility || 'private');
+      onUpdateTripMeta?.({ lastSyncedAt: Date.now() });
+    } catch (e) {
+      console.error('Failed to sync to cloud:', e);
+      alert('同步失敗，請稍後再試');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Feasibility Check State
   const {
@@ -353,6 +430,42 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          {/* Visibility Toggle */}
+          <VisibilityToggle
+            visibility={trip.visibility || 'private'}
+            isShared={!!trip.serverTripId}
+            isSyncing={isSyncing}
+            onVisibilityChange={handleVisibilityChange}
+            onShareToggle={handleShareToggle}
+            disabled={!trip.data}
+          />
+
+          {/* Sync to Cloud Button - Only show when already shared */}
+          {trip.serverTripId && (
+            <button
+              onClick={handleSyncToCloud}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-600 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+              title="同步最新變更到雲端"
+            >
+              {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cloud className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">同步</span>
+            </button>
+          )}
+
+          {/* Share Link Button - Only show when shared */}
+          {trip.serverTripId && (
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors"
+              title="取得分享連結"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">連結</span>
+            </button>
+          )}
+
+          {/* Ready Status */}
           <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> {t('trip.ready') || "Ready"}
           </div>
@@ -567,6 +680,14 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
         currentStops={currentDayData?.stops || []}
         onConfirm={handleExplorerConfirm}
         mode="modification"
+      />
+
+      {/* Share Trip Modal */}
+      <ShareTripModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        trip={trip}
+        onVisibilityChange={(v) => onUpdateTripMeta?.({ visibility: v })}
       />
     </div>
   );

@@ -1,0 +1,162 @@
+import type { Trip, TripVisibility, SharedTrip, SharedTripMeta, GalleryResponse } from '../types';
+
+// ==========================================
+// TripShareService - Frontend API Client
+// ==========================================
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+class TripShareService {
+    private getAuthHeaders(): HeadersInit {
+        const token = localStorage.getItem('google_auth_token');
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json'
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        return headers;
+    }
+
+    // ==========================================
+    // Trip Operations
+    // ==========================================
+
+    async saveTrip(trip: Trip, visibility: TripVisibility): Promise<string> {
+        const tripId = trip.serverTripId || trip.id;
+
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}`, {
+            method: 'PUT',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ tripData: trip, visibility })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to save trip');
+        }
+
+        const result = await response.json();
+        return result.tripId;
+    }
+
+    async getTrip(tripId: string): Promise<SharedTrip> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}`, {
+            method: 'GET',
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get trip');
+        }
+
+        return response.json();
+    }
+
+    async deleteServerTrip(tripId: string): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}`, {
+            method: 'DELETE',
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete trip');
+        }
+    }
+
+    // ==========================================
+    // Visibility & Permissions
+    // ==========================================
+
+    async updateVisibility(tripId: string, visibility: TripVisibility): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/visibility`, {
+            method: 'PATCH',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ visibility })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update visibility');
+        }
+    }
+
+    async updatePermissions(tripId: string, allowedUsers: string[]): Promise<void> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/permissions`, {
+            method: 'PATCH',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ allowedUsers })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update permissions');
+        }
+    }
+
+    // ==========================================
+    // Engagement
+    // ==========================================
+
+    async likeTrip(tripId: string): Promise<number> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/like`, {
+            method: 'POST',
+            headers: this.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to like trip');
+        }
+
+        const result = await response.json();
+        return result.likeCount;
+    }
+
+    // ==========================================
+    // Gallery
+    // ==========================================
+
+    async getGallery(page: number = 1, pageSize: number = 12): Promise<GalleryResponse> {
+        const response = await fetch(
+            `${API_BASE_URL}/api/gallery?page=${page}&pageSize=${pageSize}`,
+            { method: 'GET' }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get gallery');
+        }
+
+        return response.json();
+    }
+
+    async getRandomTrips(count: number = 6): Promise<SharedTripMeta[]> {
+        const response = await fetch(
+            `${API_BASE_URL}/api/gallery/random?count=${count}`,
+            { method: 'GET' }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to get random trips');
+        }
+
+        const result = await response.json();
+        return result.trips;
+    }
+
+    // ==========================================
+    // Helpers
+    // ==========================================
+
+    getShareUrl(tripId: string): string {
+        const baseUrl = window.location.origin;
+        return `${baseUrl}/trip/${tripId}`;
+    }
+}
+
+export const tripShareService = new TripShareService();
+export default tripShareService;

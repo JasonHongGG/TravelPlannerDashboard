@@ -72,6 +72,10 @@ export interface Trip {
   errorMsg?: string;
   generationTimeMs?: number;
   customCoverImage?: string;
+  // Sharing fields
+  visibility?: TripVisibility;
+  serverTripId?: string;      // Server-side ID (exists after sharing)
+  lastSyncedAt?: number;      // Last sync timestamp
 }
 
 export type MessageRole = 'user' | 'model';
@@ -100,4 +104,56 @@ export interface FeasibilityResult {
 export interface UpdateResult {
   responseText: string;
   updatedData?: TripData;
+}
+
+// ==========================================
+// Trip Sharing Types
+// ==========================================
+
+export type TripVisibility = 'private' | 'public';
+
+export interface Engagement {
+  type: 'view' | 'like';
+  userId?: string;
+  timestamp: number;
+}
+
+export interface SharedTripMeta {
+  tripId: string;
+  ownerId: string;
+  ownerName: string;
+  ownerPicture?: string;
+  visibility: TripVisibility;
+  title: string;
+  destination: string;
+  coverImage?: string;
+  dateRange: string;
+  days: number;
+  createdAt: number;
+  lastModified: number;
+  viewCount: number;
+  likeCount: number;
+  recentEngagements: Engagement[];
+}
+
+export interface SharedTrip {
+  tripId: string;
+  ownerId: string;
+  visibility: TripVisibility;
+  allowedUsers: string[];
+  createdAt: number;
+  lastModified: number;
+  tripData: Trip;
+}
+
+export interface TripIndex {
+  publicTrips: string[];
+  sharedPrivateTrips: string[];
+}
+
+export interface GalleryResponse {
+  trips: SharedTripMeta[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
