@@ -48,7 +48,7 @@ export default function LoginScreen() {
                 {/* Title */}
                 <div className="space-y-2">
                     <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-200 via-white to-indigo-200">
-                        AI Travel Planner
+                        Travel Planner
                     </h1>
                     <p className="text-gray-400 text-sm tracking-wide uppercase">
                         Design Your Perfect Journey

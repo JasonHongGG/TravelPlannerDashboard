@@ -41,7 +41,7 @@
         "settings": "설정"
     },
     "dashboard": {
-        "app_name": "AI Travel Planner",
+        "app_name": "Travel Planner",
         "import": "가져오기",
         "start_planning": "계획 시작",
         "new_btn_short": "신규",

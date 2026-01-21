@@ -41,7 +41,7 @@
         "settings": "設定"
     },
     "dashboard": {
-        "app_name": "AI Travel Planner",
+        "app_name": "Travel Planner",
         "import": "匯入",
         "start_planning": "開始規劃",
         "new_btn_short": "新增",
@@ -117,6 +117,7 @@
         "error_update": "更新行程時發生錯誤，請稍後再試。",
         "back_to_dashboard": "返回主控台",
         "generating": "正在為您規劃夢想旅程...",
+        "generating_desc": "AI 正在分析您的興趣與偏好，為您安排最佳路線，請稍候...",
         "checking_feasibility": "正在評估行程可行性",
         "check_desc": "AI 正在檢查路線順暢度與時間安排...",
         "reshaping": "正在為您重塑行程",

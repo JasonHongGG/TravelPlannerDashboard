@@ -41,7 +41,7 @@
         "settings": "設定"
     },
     "dashboard": {
-        "app_name": "AI Travel Planner",
+        "app_name": "Travel Planner",
         "import": "インポート",
         "start_planning": "計画を開始",
         "new_btn_short": "新規",

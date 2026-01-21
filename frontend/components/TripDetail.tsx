@@ -323,10 +323,42 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   // Loading State
   if (!trip.data) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-500 mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-700">{t('trip.generating')}</h2>
-        <button onClick={onBack} className="mt-8 text-brand-600 hover:underline">{t('common.cancel')}</button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white text-center px-6 relative overflow-hidden">
+
+        {/* Background Decorations */}
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-brand-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" />
+        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-sky-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse animation-delay-2000" />
+
+        {/* Central Content */}
+        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in-95 duration-700">
+
+          {/* Existing Spinner (Preserved as requested) */}
+          <div className="relative mb-8">
+            {/* Add a subtle glow behind the spinner */}
+            <div className="absolute inset-0 bg-brand-200/40 blur-xl rounded-full scale-150" />
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-500 shadow-lg shadow-brand-200"></div>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-3">
+            {t('trip.generating')}
+          </h2>
+
+          <p className="text-gray-500 font-medium animate-pulse mb-8">
+            {t('trip.generating_desc') || "正在為您編織獨一無二的旅程..."}
+          </p>
+
+          <button
+            onClick={onBack}
+            className="group px-6 py-2.5 bg-white text-gray-500 border border-gray-200 rounded-full text-sm font-bold hover:text-gray-900 hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 shadow-sm hover:shadow"
+          >
+            {t('common.back')}
+          </button>
+        </div>
+
+        {/* Footer simple branding */}
+        <div className="absolute bottom-10 text-xs font-semibold text-gray-300 tracking-[0.2em] uppercase">
+          Travel Planner
+        </div>
       </div>
     );
   }

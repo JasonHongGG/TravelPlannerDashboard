@@ -1,6 +1,6 @@
 {
     "app": {
-        "title": "AI Travel Planner",
+        "title": "Travel Planner",
         "description": "Your Personal Travel Assistant",
         "made_by": "Designed by Jason Hong"
     },
@@ -41,7 +41,7 @@
         "settings": "Settings"
     },
     "dashboard": {
-        "app_name": "AI Travel Planner",
+        "app_name": "Travel Planner",
         "import": "Import",
         "start_planning": "Start Planning",
         "new_btn_short": "New",
