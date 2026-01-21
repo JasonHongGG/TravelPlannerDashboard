@@ -10,10 +10,10 @@ export const SYSTEM_INSTRUCTION = `
 
 【語言與命名規則 (絕對遵守)】
 1.  **地點名稱 (Stop Name)**：
-    *   必須使用**該地點的當地原生語言**。
-    *   **日本**：使用日文漢字/片假名 (例：✅ "成城石井 アトレ上野店", ❌ "Seijo Ishii", ❌ "成城石井超市")。
-    *   **韓國**：使用韓文 (例：✅ "경복궁", ❌ "Gyeongbokgung")，可括號附註中文。
-    *   **歐美**：使用當地語言 (英文/法文等)。
+    *   **請優先遵循 Prompt 中指定的語言規則** (例如：若指定使用中文標題，則使用中文)。
+    *   **若無特別指定**，則預設使用**該地點的當地原生語言** (Node Purity)。
+    *   **日本**：原生預設為日文 (例：✅ "成城石井", ❌ "Seijo Ishii")。
+    *   **歐美**：原生預設為當地語言。
     *   **例外**：若該地點對外國遊客主要使用英文名稱 (如 "Universal Studios Japan") 則維持英文。
 2.  **描述與內容 (Descriptions/Notes)**：
     *   **所有行程描述、理由、小撇步、標題 (Theme)**：
@@ -99,6 +99,13 @@ You must strictly follow this JSON structure. Do not wrap in markdown code block
 
 export const constructTripPrompt = (input: TripInput): string => {
   const targetLang = input.language || "Traditional Chinese";
+  // Use explicit title language preference if available, otherwise fallback to targetLang logic
+  const titleLang = (input as any).titleLanguage || targetLang;
+
+  const titleRule = titleLang.includes("Local Language")
+    ? "Place names MUST be in the local native language (e.g. Japanese)."
+    : `Place names (Stop Names) MUST be in ${titleLang} (e.g. use "淺草寺" if Traditional Chinese).`;
+
   return `
     Please design a **highly engaging, professional, and detailed** travel itinerary based on the following:
     
@@ -116,10 +123,10 @@ export const constructTripPrompt = (input: TripInput): string => {
 
     **IMPORTANT REQUIREMENTS:**
     1. **Language**: 
-       - Place names MUST be in the local native language (e.g. Japanese). 
+       - **Place names (Stop Names)**: ${titleRule}
        - **All Descriptions, Notes, and Themes MUST be in ${targetLang}**. 
     2. **Strict Node Purity**: Every stop MUST be a specific place.
-       - **Attractions**: e.g., "Senso-ji".
+       - **Attractions**: e.g., "Senso-ji" or "淺草寺".
        - **Dining**: e.g., "Ichiran Ramen". **Breakfast, Lunch, and Dinner must be individual stops with specific restaurant names.**
        - **Transport Hubs**: e.g., "Shinjuku Station" (Only for start/end points).
        - **NEVER** create a stop named "Travel to..." or "A -> B".
@@ -140,6 +147,13 @@ export const constructUpdatePrompt = (
 ): string => {
   const historyText = history.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n');
   const lastUserMessage = history[history.length - 1]?.text || "";
+
+  // Determine title rule based on tripLanguage param
+  // If tripLanguage contains "Local", we enforce local. Otherwise we enforce that language.
+  const useLocalTitles = tripLanguage.includes("Local Language");
+  const titleRule = useLocalTitles
+    ? "Place names MUST be in the local native language (e.g. Japanese)."
+    : `Place names MUST be in ${tripLanguage} (e.g. use "淺草寺" not "Senso-ji" if language is Chinese).`;
 
   return `
     Current Itinerary JSON:
@@ -184,7 +198,7 @@ export const constructUpdatePrompt = (
     - Always output valid JSON.
 
     **CONTENT RULES FOR JSON UPDATE**: 
-    - **Language**: Place names MUST be in the local native language (e.g. Japanese). 
+    - **Language**: ${titleRule}
     - **Descriptions MUST be in ${tripLanguage}**.
     - Maintain "Node Purity" (Specific Place Names only).
     - Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
@@ -201,6 +215,11 @@ export const constructExplorerUpdatePrompt = (
   chatLanguage: string = "Traditional Chinese",
   tripLanguage: string = "Traditional Chinese"
 ): string => {
+  const useLocalTitles = tripLanguage.includes("Local Language");
+  const titleRule = useLocalTitles
+    ? "地點名稱維持當地原生語言 (Node Purity)。"
+    : `地點名稱請使用 ${tripLanguage} (例如：使用中文名稱)。`;
+
   return `
     任務：重新規劃第 ${dayIndex} 天的行程。
 
@@ -228,7 +247,7 @@ export const constructExplorerUpdatePrompt = (
     3.  輸出 JSON，僅包含更新後的第 ${dayIndex} 天資料 (Partial Update)。
 
     **核心原則複誦**：
-    - 地點名稱維持當地原生語言 (Node Purity)。
+    - ${titleRule}
     - **行程描述與備註使用 ${tripLanguage}**。
     - 確保交通邏輯合理。
     `;
@@ -239,7 +258,8 @@ export const constructRecommendationPrompt = (
   interests: string,
   category: 'attraction' | 'food',
   excludeNames: string[],
-  targetLanguage: string = "Traditional Chinese"
+  targetLanguage: string = "Traditional Chinese",
+  titleLanguage: string = "Local Language"
 ): string => {
   const categoryPrompt = category === 'food'
     ? "當地必吃美食、餐廳、咖啡廳、甜點店、街頭小吃 (請專注於餐飲)"
@@ -249,12 +269,16 @@ export const constructRecommendationPrompt = (
     ? `請絕對**不要**重複推薦以下地點：${excludeNames.join(', ')}。`
     : "";
 
+  const titleRule = titleLanguage.includes("Local Language")
+    ? "(請使用當地語言，如日文、韓文)"
+    : `(請使用 ${titleLanguage})`;
+
   return `請針對目的地「${location}」推薦 12 個${categoryPrompt}。
   考慮使用者的興趣：「${interests}」。
   ${excludePrompt}
   
   回傳格式必須是 JSON 陣列，每個物件包含：
-  - name: 地點名稱 (請使用當地語言，如日文、韓文)
+  - name: 地點名稱 ${titleRule}
   - description: 一句話介紹 (${targetLanguage})
   - category: 具體類別 (如：拉麵、燒肉、古蹟、百貨、夜景)
   - reason: 為什麼推薦 (${targetLanguage})

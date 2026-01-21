@@ -349,14 +349,15 @@ export class TravelAIService {
         category: "attraction" | "food" = 'attraction',
         excludeNames: string[] = [],
         userId?: string,
-        language: string = "Traditional Chinese"
+        language: string = "Traditional Chinese",
+        titleLanguage?: string
     ): Promise<AttractionRecommendation[]> {
 
 
         const responseText = await this.postGenerate(
             'GET_RECOMMENDATIONS',
             `Recommendations: ${location} (${category})`,
-            { location, interests, category, excludeNames, language }
+            { location, interests, category, excludeNames, language, titleLanguage }
         );
 
         try {

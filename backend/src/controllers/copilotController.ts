@@ -67,6 +67,10 @@ export async function processCopilot(req: Request, res: Response) {
             removeExisting
         } = req.body;
 
+        if (action === 'GENERATE_TRIP') {
+            console.log(`[Copilot Server] Received Trip Input:`, JSON.stringify(tripInput, null, 2));
+        }
+
         console.log(`[Copilot Server] Processing Action: ${action}`);
         const activeClient = await ensureClient();
 
@@ -95,7 +99,7 @@ export async function processCopilot(req: Request, res: Response) {
                 break;
             case 'GET_RECOMMENDATIONS':
                 console.log(`[Copilot Server] Getting Recommendations: ${location}`);
-                prompt = constructRecommendationPrompt(location, interests, category, excludeNames, effectiveChatLanguage);
+                prompt = constructRecommendationPrompt(location, interests, category, excludeNames, effectiveChatLanguage, effectiveTripLanguage);
                 model = SERVICE_CONFIG.copilot.models.recommender;
                 break;
             case 'CHECK_FEASIBILITY':
@@ -162,6 +166,12 @@ export async function processCopilot(req: Request, res: Response) {
 
     } catch (e: any) {
         console.error("[Copilot Server] Error:", e);
-        res.status(500).json({ error: e.message || 'Copilot server error' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: e.message || 'Copilot server error' });
+        } else {
+            // Stream already started, send error event
+            res.write(`data: ${JSON.stringify({ type: 'error', message: e.message || 'Copilot server error' })}\n\n`);
+            res.end();
+        }
     }
 }

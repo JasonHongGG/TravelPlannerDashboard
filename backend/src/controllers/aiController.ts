@@ -14,7 +14,7 @@ export function getPackages(req: Request, res: Response) {
 
 export async function generate(req: Request, res: Response) {
     try {
-        const { userId: requestedUserId, action, description, tripInput, location, interests, category, excludeNames, language, tripData, modificationContext } = req.body;
+        const { userId: requestedUserId, action, description, tripInput, location, interests, category, excludeNames, language, titleLanguage, tripData, modificationContext } = req.body;
         const authToken = (req.headers.authorization || '').replace('Bearer ', '');
         const authUser = (req as Request & { user?: { email?: string } }).user;
         const userId = authUser?.email as string;
@@ -44,7 +44,7 @@ export async function generate(req: Request, res: Response) {
         // 3. Dispatch to Provider (Unified)
         let result;
         if (action === 'GET_RECOMMENDATIONS') {
-            const results = await provider.getRecommendations(location, interests, category, excludeNames, userId, undefined, language);
+            const results = await provider.getRecommendations(location, interests, category, excludeNames, userId, undefined, language, titleLanguage);
             result = { text: JSON.stringify(results) };
 
         } else if (action === 'CHECK_FEASIBILITY') {

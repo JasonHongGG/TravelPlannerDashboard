@@ -58,9 +58,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             try {
                 // Try to fetch from cloud
                 const remoteSettings = await fetchRemoteSettings(user.email);
-                setSettings(remoteSettings);
+                setSettings({ ...DEFAULT_SETTINGS, ...remoteSettings });
                 // Update local backup
-                saveLocalSettings(user.email, remoteSettings);
+                saveLocalSettings(user.email, { ...DEFAULT_SETTINGS, ...remoteSettings });
                 console.log("[SettingsContext] Synced settings from cloud");
             } catch (error) {
                 console.warn("[SettingsContext] Failed to sync from cloud, trying local backup");

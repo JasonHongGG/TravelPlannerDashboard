@@ -4,6 +4,7 @@ import { TripInput } from '../types';
 import { X, Calendar, MapPin, Users, Heart, DollarSign, Train, Home, Clock, CheckSquare, Languages, AlertCircle, Download, Upload, Sparkles, Plane, Briefcase, Coins, ArrowRight } from 'lucide-react';
 import AttractionExplorer from './AttractionExplorer';
 import { usePoints } from '../context/PointsContext';
+import { useSettings } from '../context/SettingsContext';
 import { calculateTripCost } from '../utils/tripUtils';
 import DateRangePicker from './DateRangePicker';
 import { useTranslation } from 'react-i18next';
@@ -66,6 +67,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
   const { t, i18n } = useTranslation();
+  const { settings } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [showPointsModal, setShowPointsModal] = useState(false);
@@ -83,7 +85,12 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
           default: return 'Traditional Chinese';
         }
       };
-      setFormData(prev => ({ ...prev, language: getPromptLanguage(i18n.language) }));
+      const currentLang = getPromptLanguage(i18n.language);
+
+      setFormData(prev => ({
+        ...prev,
+        language: currentLang
+      }));
     }
   }, [isOpen, i18n.language]);
 
@@ -470,16 +477,7 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
         onConfirm={handleExplorerConfirm}
         currentStops={[]}
         mode="planning"
-      />
-
-      <AttractionExplorer
-        isOpen={isExplorerOpen}
-        onClose={() => setIsExplorerOpen(false)}
-        initialLocation={formData.destination}
-        initialInterests={formData.interests}
-        onConfirm={handleExplorerConfirm}
-        currentStops={[]}
-        mode="planning"
+        referenceLanguage={formData.language}
       />
 
       {/* Premium Confirmation Modal */}
@@ -571,7 +569,16 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                 ) : (
                   <button
                     onClick={() => {
-                      onSubmit(formData);
+                      // Calculate final titleLanguage based on current settings and language input
+                      // If mode is local, force Local Language. Else use the specified form language.
+                      const finalTitleLanguage = settings.titleLanguageMode === 'local'
+                        ? 'Local Language'
+                        : formData.language;
+
+                      onSubmit({
+                        ...formData,
+                        titleLanguage: finalTitleLanguage
+                      } as TripInput & { titleLanguage: string });
                       onClose();
                       setShowPointsModal(false);
                     }}

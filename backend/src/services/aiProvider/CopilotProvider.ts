@@ -99,8 +99,8 @@ export class CopilotProvider implements IAIProvider {
         return { responseText: parts[0], updatedData };
     }
 
-    async getRecommendations(location: string, interests: string, category: "attraction" | "food", excludeNames?: string[], userId?: string, apiSecret?: string, language?: string): Promise<AttractionRecommendation[]> {
-        const text = await this.callCopilot('GET_RECOMMENDATIONS', { location, interests, category, excludeNames, language });
+    async getRecommendations(location: string, interests: string, category: "attraction" | "food", excludeNames?: string[], userId?: string, apiSecret?: string, language?: string, titleLanguage?: string): Promise<AttractionRecommendation[]> {
+        const text = await this.callCopilot('GET_RECOMMENDATIONS', { location, interests, category, excludeNames, language, tripLanguage: titleLanguage });
         const json = this.parseJson(text);
         return Array.isArray(json) ? json : [];
     }

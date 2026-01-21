@@ -30,10 +30,12 @@ interface Props {
 }
 
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMeta }: Props) {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   // Map i18n code to prompt language name
   const getPromptLanguage = (lng: string) => {
@@ -44,6 +46,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       default: return 'Traditional Chinese';
     }
   };
+
+  const currentLanguage = getPromptLanguage(i18n.language);
 
   const {
     selectedDay,
@@ -165,7 +169,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   const handleAiUpdate = async (history: Message[], onThought: (text: string) => void): Promise<string> => {
     if (!trip.data) return "";
 
-    const chatLang = getPromptLanguage(i18n.language);
+    const chatLang = currentLanguage;
     const tripLang = trip.input.language || chatLang;
 
     // Phase 1: Planning (Generating JSON) - This fills the "freeze" gap
@@ -180,8 +184,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
         history,
         onThought,
         user?.email,
-        chatLang,
-        tripLang,
+        chatLang, // Chat Language
+        settings.titleLanguageMode === 'local' ? 'Local Language of Destination' : tripLang, // Trip Title Language
         () => setAiProcessState('planning') // Trigger planning state only when JSON generation starts
       );
 
@@ -282,7 +286,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       try {
         // Call backend with specific params
         const result = await aiService.updateTripWithExplorer(
-          trip.data!, // Assuming trip.data is the safeTripData
+          trip.data!,
           selectedDay,
           newMustVisit,
           newAvoid,
@@ -290,8 +294,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           removeExisting,
           (thought) => console.log("AI Thinking:", thought),
           user?.email,
-          getPromptLanguage(i18n.language),
-          trip.input.language || getPromptLanguage(i18n.language),
+          currentLanguage, // Chat language
+          settings.titleLanguageMode === 'local' ? 'Local Language of Destination' : (trip.input.language || currentLanguage), // Trip Title Language
           () => setAiProcessState('planning')
         );
 

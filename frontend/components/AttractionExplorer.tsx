@@ -22,6 +22,7 @@ interface Props {
         removeExisting: string[]
     ) => void;
     mode?: 'planning' | 'modification';
+    referenceLanguage?: string;
 }
 
 type TabType = 'attraction' | 'food';
@@ -35,7 +36,8 @@ export default function AttractionExplorer({
     initialInterests,
     currentStops,
     onConfirm,
-    mode = 'modification' // Default to modification for backward compatibility
+    mode = 'modification', // Default to modification for backward compatibility
+    referenceLanguage
 }: Props) {
     const { t, i18n } = useTranslation();
     const [location, setLocation] = useState(initialLocation);
@@ -281,8 +283,15 @@ export default function AttractionExplorer({
             };
             const lang = getPromptLanguage(i18n.language);
 
+            // Determine Title Language based on settings
+            // If local -> "Local Language"
+            // If specified -> use referenceLanguage (from trip or form) or fallback to system lang
+            const titleLanguage = settings.titleLanguageMode === 'local'
+                ? "Local Language"
+                : (referenceLanguage || lang);
+
             // Pass userId and language
-            const newItems = await aiService.getRecommendations(query, initialInterests, targetTab, excludeNames, userId, lang);
+            const newItems = await aiService.getRecommendations(query, initialInterests, targetTab, excludeNames, userId, lang, titleLanguage);
 
             if (isMounted.current) {
                 setResults(prev => ({
