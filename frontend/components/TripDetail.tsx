@@ -278,17 +278,44 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   // Error State
   if (trip.status === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 px-4 text-center">
-        <div className="bg-red-100 p-4 rounded-full mb-4">
-          <AlertTriangle className="w-12 h-12 text-red-500" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white text-center px-6 relative overflow-hidden">
+
+        {/* Background Decorations */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-red-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
+        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-orange-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
+
+        {/* Icon */}
+        <div className="relative mb-8 animate-in fade-in zoom-in-50 duration-700">
+          <div className="absolute inset-0 bg-red-100/50 blur-2xl rounded-full scale-150 transform translate-y-4" />
+          <div className="relative bg-white w-24 h-24 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex items-center justify-center border border-red-50 rotate-3 transition-transform hover:rotate-0 duration-500 group">
+            <AlertTriangle className="w-10 h-10 text-red-500 group-hover:scale-110 transition-transform duration-300" strokeWidth={1.5} />
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('trip.error_title')}</h2>
-        <p className="text-gray-600 max-w-md mb-8">
-          {trip.errorMsg || t('trip.error_desc')}
-        </p>
-        <button onClick={onBack} className="px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-          {t('trip.back_to_dashboard')}
-        </button>
+
+        {/* Text Content */}
+        <div className="max-w-lg mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+            {t('trip.error_title')}
+          </h2>
+
+          <p className="text-lg text-gray-500 leading-relaxed">
+            {t('trip.error_desc')}
+          </p>
+
+          <div className="pt-8 flex justify-center gap-4">
+            <button
+              onClick={onBack}
+              className="group flex items-center gap-2 px-8 py-3.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-black hover:-translate-y-0.5 transition-all duration-200 shadow-lg shadow-gray-200"
+            >
+              <span>{t('trip.back_to_dashboard')}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Footer simple branding */}
+        <div className="absolute bottom-10 text-xs font-semibold text-gray-300 tracking-[0.2em] uppercase">
+          Travel Planner
+        </div>
       </div>
     );
   }
