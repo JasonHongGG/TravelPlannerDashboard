@@ -137,19 +137,6 @@ export default function AttractionExplorer({
         setBatchCreditsImmediate(tab, batchCreditsRef.current[tab] + delta);
     };
 
-    const logBatchState = (stage: string, tab: TabType) => {
-        console.log('[ExplorerBatch]', {
-            stage,
-            tab,
-            batchSize: BATCH_SIZE,
-            queueSize: QUEUE_SIZE,
-            batchCredits: batchCreditsRef.current[tab],
-            resultsCount: results[tab].length,
-            bufferCount: buffer[tab].length,
-            preloadingTab
-        });
-    };
-
     // =================================================================
     // Pre-fetching Logic
     // =================================================================
@@ -216,10 +203,7 @@ export default function AttractionExplorer({
         if (!isMounted.current) return;
 
         const currentTab = activeTab;
-        if (getRemainingBatchCredits(currentTab) <= 0) {
-            logBatchState('prefetch_blocked_quota', currentTab);
-            return;
-        }
+        if (getRemainingBatchCredits(currentTab) <= 0) return;
 
         // Prevent duplicate loads for SAME tab
         if (preloadingTab === currentTab) return;
@@ -243,8 +227,6 @@ export default function AttractionExplorer({
                 }));
             }
         };
-
-        logBatchState('prefetch_start', currentTab);
 
         try {
             // Exclude everything we know about
@@ -283,7 +265,6 @@ export default function AttractionExplorer({
         } catch (e) {
             console.error("Background fetch failed", e);
         } finally {
-            logBatchState('prefetch_end', currentTab);
             if (isMounted.current) {
                 // Only clear if WE were the one preloading this tab
                 setPreloadingTab(prev => (prev === currentTab ? null : prev));
@@ -313,8 +294,6 @@ export default function AttractionExplorer({
         const currentTab = activeTab;
         const currentBuffer = buffer[currentTab];
         const flushedCount = currentBuffer.length;
-        logBatchState('load_more_clicked', currentTab);
-
         const remainingCredits = getRemainingBatchCredits(currentTab);
         if (remainingCredits <= 0) {
             setPaymentConfirmation({
@@ -323,14 +302,11 @@ export default function AttractionExplorer({
                 totalCost: getBatchCost(),
                 targetTab: currentTab
             });
-            logBatchState('load_more_paywall', currentTab);
             return;
         }
 
         // Consume one batch credit for this load-more action
         addBatchCreditsImmediate(currentTab, -1);
-        logBatchState('load_more_consume_credit', currentTab);
-
         setIsLoadingMore(true);
         // Sync ref immediately for the active stream callback to see
         isLoadingMoreRef.current = true;
@@ -338,11 +314,8 @@ export default function AttractionExplorer({
         // 1. Flush Buffer to Results Immediately
         // Whether full batch or partial, show them NOW.
         if (flushedCount > 0) {
-            setResults(prev => ({
-                ...prev,
-                [currentTab]: [...prev[currentTab], ...currentBuffer]
-            }));
-            setBuffer(prev => ({ ...prev, [currentTab]: [] }));
+            // Only reveal ONE batch at a time
+            consumeBuffer();
         }
 
         // Update Target Count
@@ -354,7 +327,6 @@ export default function AttractionExplorer({
         if (flushedCount >= BATCH_SIZE) {
             setIsLoadingMore(false);
             isLoadingMoreRef.current = false;
-            logBatchState('load_more_flushed_full_batch', currentTab);
             return;
         }
 
@@ -363,7 +335,6 @@ export default function AttractionExplorer({
         // and automatically start pushing the REST of the items to `results`.
         // The useEffect will handle turning off isLoadingMore when preloadingTab becomes null.
         if (preloadingTab === currentTab) {
-            logBatchState('load_more_hijack_stream', currentTab);
             return;
         }
 
@@ -376,7 +347,6 @@ export default function AttractionExplorer({
 
         setIsLoadingMore(false);
         isLoadingMoreRef.current = false;
-        logBatchState('load_more_fetch_complete', currentTab);
     };
 
     // =================================================================
@@ -412,7 +382,6 @@ export default function AttractionExplorer({
                 totalCost,
                 targetTab
             });
-            logBatchState('search_confirm_modal', targetTab);
             return; // Stop here, wait for modal confirmation
         }
 
@@ -433,8 +402,6 @@ export default function AttractionExplorer({
         setBuffer(prev => ({ ...prev, [targetTab]: [] }));
         setIsWaitingForBuffer(false);
         setBatchCreditsImmediate(targetTab, 1 + QUEUE_SIZE);
-        logBatchState('search_confirmed', targetTab);
-
         // Security: Pass user ID to backend via service
         // Note: Service handles cost calculation (backend), we just pass credentials
         executeSearchLogic(query, targetTab, true, user?.email);
@@ -446,8 +413,6 @@ export default function AttractionExplorer({
 
         setPaymentConfirmation(null);
         addBatchCreditsImmediate(targetTab, 1 + QUEUE_SIZE);
-        logBatchState('load_more_confirmed', targetTab);
-
         await handleLoadMore();
     };
 
@@ -456,8 +421,6 @@ export default function AttractionExplorer({
     const executeSearchLogic = async (query: string, targetTab: TabType, isNewSearch: boolean, userId?: string) => {
         setInitialLoading(true);
         addBatchCreditsImmediate(targetTab, -1);
-        logBatchState('search_stream_start', targetTab);
-
         try {
             // Initial fetch only excludes current stops (results are empty)
             const excludeNames = [...currentStops.map(s => s.name)];
@@ -505,8 +468,6 @@ export default function AttractionExplorer({
                 lang,
                 titleLanguage
             );
-            logBatchState('search_stream_end', targetTab);
-
         } catch (e) {
             console.error(e);
         } finally {
@@ -554,7 +515,11 @@ export default function AttractionExplorer({
     // Calculate batch status for UI
     // Dynamic based on buffer size
     const bufferCount = buffer[activeTab].length;
-    const preloadingBatchNumber = Math.min(QUEUE_SIZE, Math.floor(bufferCount / BATCH_SIZE) + 1);
+    const remainingQueueBatches = Math.max(0, Math.min(QUEUE_SIZE, batchCredits[activeTab]));
+    const preparedBatchCount = Math.min(
+        remainingQueueBatches,
+        Math.max(1, Math.ceil(bufferCount / BATCH_SIZE))
+    );
 
     if (!isOpen) return null;
 
@@ -881,10 +846,10 @@ export default function AttractionExplorer({
 
                                         {/* Pre-loading Status Text */}
                                         <div className="h-5 text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
-                                            {QUEUE_SIZE > 0 && preloadingTab === activeTab && !isWaitingForBuffer && (
+                                            {remainingQueueBatches > 0 && preloadingTab === activeTab && !isWaitingForBuffer && (
                                                 <>
                                                     <Loader2 className="w-3 h-3 animate-spin" />
-                                                    <span>{t('explorer.preloading', { current: 1, total: QUEUE_SIZE })}</span>
+                                                    <span>{t('explorer.preloading', { current: preparedBatchCount, total: remainingQueueBatches })}</span>
                                                 </>
                                             )}
                                         </div>

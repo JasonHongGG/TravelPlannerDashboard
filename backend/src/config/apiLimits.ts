@@ -1,5 +1,5 @@
 // Recommendations: fixed server-side batch size (frontend does NOT send count)
-export const RECOMMENDATION_COUNT = 12;
+export const RECOMMENDATION_COUNT = 2;
 
 // Gallery pagination: frontend may send page/pageSize, server clamps with these limits
 export const GALLERY_PAGE_SIZE_DEFAULT = 12;
