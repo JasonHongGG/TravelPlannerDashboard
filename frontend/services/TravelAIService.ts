@@ -383,7 +383,13 @@ export class TravelAIService {
         onItem: (item: AttractionRecommendation) => void,
         userId?: string,
         language: string = "Traditional Chinese",
-        titleLanguage?: string
+        titleLanguage?: string,
+        options?: {
+            mode?: 'init' | 'next',
+            sessionId?: string,
+            queueSize?: number,
+            onSessionStart?: (sessionId: string) => void
+        }
     ): Promise<void> {
         const headers = this.getAuthHeaders();
         const response = await fetch(`${SERVER_URL}/stream-recommendations`, {
@@ -395,11 +401,19 @@ export class TravelAIService {
                 category,
                 excludeNames,
                 language,
-                titleLanguage
+                titleLanguage,
+                mode: options?.mode,
+                sessionId: options?.sessionId,
+                queueSize: options?.queueSize
             })
         });
 
         if (!response.ok) {
+            // Handle Quota Exceeded specifically
+            if (response.status === 402) {
+                const errorData = await response.json();
+                throw new Error(errorData.code || "QUOTA_EXCEEDED");
+            }
             throw await parseErrorResponse(response, 'Server error');
         }
 
@@ -424,6 +438,10 @@ export class TravelAIService {
                         const data = JSON.parse(dataStr);
                         if (data.type === 'item' && data.item) {
                             onItem(data.item);
+                        } else if (data.type === 'meta' && data.sessionId) {
+                            if (options?.onSessionStart) {
+                                options.onSessionStart(data.sessionId);
+                            }
                         } else if (data.type === 'error') {
                             throw new Error(data.message);
                         }

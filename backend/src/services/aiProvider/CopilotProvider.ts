@@ -118,9 +118,14 @@ export class CopilotProvider implements IAIProvider {
         count?: number
     ): Promise<void> {
         try {
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (apiSecret) {
+                headers['Authorization'] = `Bearer ${apiSecret}`;
+            }
+
             const response = await fetch(COPILOT_SERVER_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     action: 'GET_RECOMMENDATIONS',
                     location,

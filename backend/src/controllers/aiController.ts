@@ -4,6 +4,7 @@ import { deductPoints } from '../services/business/pointsService';
 import { pricingService } from '../services/business/pricingService';
 import { packageService } from '../services/business/packageService';
 import { RECOMMENDATION_COUNT } from '../config/apiLimits';
+import { sessionStore } from '../services/recommendationSessionStore';
 
 export function getConfig(req: Request, res: Response) {
     res.json(pricingService.getConfig());
@@ -156,17 +157,63 @@ export async function streamRecommendations(req: Request, res: Response) {
         const provider = BackendAIService.getProvider();
 
         // 1. Transaction Logic
-        const cost = pricingService.calculate('GET_RECOMMENDATIONS');
-        if (userId) {
+        // 1. Transaction Logic
+        const baseCost = pricingService.calculate('GET_RECOMMENDATIONS');
+        const { mode, sessionId, queueSize: requestedQueueSize } = req.body; // Expanded params
+
+        let shouldDeduct = true;
+        let finalCost = baseCost;
+        let transactionDesc = `Recommendations: ${location} (${category})`;
+        let activeSessionId = sessionId;
+
+        if (mode === 'init') {
+            // "Init" = Pay for Base Batch + Queue Size (Prepaid Batches)
+            const qSize = typeof requestedQueueSize === 'number' ? requestedQueueSize : 0;
+            finalCost = baseCost * (1 + qSize);
+            transactionDesc = `Recommendations Session (Start + ${qSize} buffered)`;
+        } else if (mode === 'next') {
+            // "Next" = Consume Prepaid Quota
+            if (!activeSessionId) return res.status(400).json({ error: "Session ID required for next batch" });
+
+            // Security: Verify Session Ownership
+            const session = sessionStore.getSession(activeSessionId);
+            if (!session) {
+                return res.status(404).json({ error: "Session not found or expired" });
+            }
+            if (session.userId !== userId) {
+                return res.status(403).json({ error: "Unauthorized access to this session" });
+            }
+
+            const hasQuota = sessionStore.consumeQuota(activeSessionId);
+            if (!hasQuota) {
+                return res.status(402).json({ error: "Quota exceeded. Payment required.", code: "QUOTA_EXCEEDED" });
+            }
+            shouldDeduct = false; // Already paid via Session Init
+        }
+        // Default/Legacy: Pay-per-call (shouldDeduct=true, finalCost=baseCost)
+
+        if (userId && shouldDeduct) {
             if (!authToken) return res.status(401).json({ error: "Missing auth token." });
-            const success = await deductPoints(userId, cost, `Recommendations: ${location} (${category})`, authToken);
+            const success = await deductPoints(userId, finalCost, transactionDesc, authToken);
             if (!success) return res.status(403).json({ error: "Insufficient points" });
+        }
+
+        // If 'init' mode and successful deduction, create session
+        if (mode === 'init' && userId) {
+            const qSize = typeof requestedQueueSize === 'number' ? requestedQueueSize : 0;
+            // Create session with 'qSize' credits (for *future* 'next' calls)
+            activeSessionId = sessionStore.createSession(userId, qSize, { location, interests });
         }
 
         // 2. Set Headers for SSE
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
+
+        // If we have a session (init or next), send the ID first
+        if (activeSessionId) {
+            res.write(`data: ${JSON.stringify({ type: 'meta', sessionId: activeSessionId })}\n\n`);
+        }
 
         // 3. Stream Recommendations
         if (provider.getRecommendationsStream) {
@@ -182,7 +229,7 @@ export async function streamRecommendations(req: Request, res: Response) {
 `);
                 },
                 userId,
-                undefined,
+                authToken,
                 language,
                 titleLanguage,
                 RECOMMENDATION_COUNT

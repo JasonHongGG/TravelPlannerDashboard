@@ -90,6 +90,9 @@ export default function AttractionExplorer({
     // Selection state for EXISTING stops
     const [stopStatuses, setStopStatuses] = useState<Record<string, StopStatus>>({});
 
+    // Session IDs for secure backend tracking
+    const [sessionIds, setSessionIds] = useState<{ attraction: string | null; food: string | null }>({ attraction: null, food: null });
+
     // Ref to track mounted state for async ops
     const isMounted = useRef(true);
     // Ref to track loading state synchronously for callbacks
@@ -199,7 +202,7 @@ export default function AttractionExplorer({
         }
     }, [buffer, activeTab, isWaitingForBuffer]);
 
-    const fetchNextBatchBackground = async () => {
+    const fetchNextBatchBackground = async (forceInit: boolean = false) => {
         if (!isMounted.current) return;
 
         const currentTab = activeTab;
@@ -251,6 +254,10 @@ export default function AttractionExplorer({
 
             // Use Streaming API for background fetch
             // This allows us to "tap in" mid-stream if user clicks Load More
+            // This allows us to "tap in" mid-stream if user clicks Load More
+            const currentSessionId = forceInit ? null : sessionIds[currentTab];
+            const isInit = !currentSessionId || forceInit;
+
             await aiService.getRecommendationsStream(
                 lastSearchLocation,
                 initialInterests,
@@ -259,11 +266,21 @@ export default function AttractionExplorer({
                 onItemReceived,
                 user?.email,
                 lang,
-                titleLanguage
+                titleLanguage,
+                {
+                    mode: isInit ? 'init' : 'next',
+                    sessionId: currentSessionId || undefined,
+                    queueSize: QUEUE_SIZE,
+                    onSessionStart: (id) => setSessionIds(prev => ({ ...prev, [currentTab]: id }))
+                }
             );
 
-        } catch (e) {
+        } catch (e: any) {
             console.error("Background fetch failed", e);
+            if (e.message === "QUOTA_EXCEEDED" && isMounted.current) {
+                // Backend says no quota, but frontend thought we had credits. Sync up.
+                setBatchCreditsImmediate(currentTab, 0);
+            }
         } finally {
             if (isMounted.current) {
                 // Only clear if WE were the one preloading this tab
@@ -288,7 +305,7 @@ export default function AttractionExplorer({
         }));
     };
 
-    const handleLoadMore = async () => {
+    const handleLoadMore = async (forceInit: boolean = false) => {
         if (isLoadingMore) return; // Prevent multiple concurrent loads
 
         const currentTab = activeTab;
@@ -343,7 +360,9 @@ export default function AttractionExplorer({
         // 4. If NO Preloading Active (or preloading wrong tab):
         // Start a new fetch. Since `isLoadingMore` is true, `fetchNextBatchBackground`
         // will stream items directly to `results`.
-        await fetchNextBatchBackground();
+        // Start a new fetch. Since `isLoadingMore` is true, `fetchNextBatchBackground`
+        // will stream items directly to `results`.
+        await fetchNextBatchBackground(forceInit);
 
         setIsLoadingMore(false);
         isLoadingMoreRef.current = false;
@@ -413,7 +432,11 @@ export default function AttractionExplorer({
 
         setPaymentConfirmation(null);
         addBatchCreditsImmediate(targetTab, 1 + QUEUE_SIZE);
-        await handleLoadMore();
+        // Reset sessionId to force a new 'init' call (and payment deduction) on next fetch
+        setSessionIds(prev => ({ ...prev, [targetTab]: null }));
+        // Reset sessionId to force a new 'init' call (and payment deduction) on next fetch
+        setSessionIds(prev => ({ ...prev, [targetTab]: null }));
+        await handleLoadMore(true);
     };
 
 
@@ -466,7 +489,12 @@ export default function AttractionExplorer({
                 },
                 userId,
                 lang,
-                titleLanguage
+                titleLanguage,
+                {
+                    mode: 'init',
+                    queueSize: QUEUE_SIZE,
+                    onSessionStart: (id) => setSessionIds(prev => ({ ...prev, [targetTab]: id }))
+                }
             );
         } catch (e) {
             console.error(e);
@@ -812,7 +840,7 @@ export default function AttractionExplorer({
                                     <div className="absolute -top-12 inset-x-0 h-12 bg-gradient-to-b from-transparent to-gray-50/50 pointer-events-none"></div>
                                     <div className="flex flex-col items-center justify-center gap-2">
                                         <button
-                                            onClick={handleLoadMore}
+                                            onClick={() => handleLoadMore(false)}
                                             disabled={isLoadingMore || initialLoading} // Disable if loading (initial or more)
                                             className={`
                              group relative overflow-hidden
