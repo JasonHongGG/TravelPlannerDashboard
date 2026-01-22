@@ -210,6 +210,8 @@
     "explorer": {
         "open_title": "開啟 AI 探索",
         "open_desc": "AI 將為您深入分析並推薦最佳{{target}}",
+        "load_more_title": "載入更多推薦",
+        "load_more_desc": "AI 將為您追加推薦更多{{target}}",
         "target_attraction": "景點",
         "target_food": "美食",
         "search_target": "搜尋目標",

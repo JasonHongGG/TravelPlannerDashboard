@@ -28,6 +28,7 @@ interface Props {
 type TabType = 'attraction' | 'food';
 type SidebarTab = 'must' | 'avoid' | 'current';
 type StopStatus = 'keep' | 'remove' | 'neutral';
+type PaymentMode = 'search' | 'loadMore';
 
 export default function AttractionExplorer({
     isOpen,
@@ -49,7 +50,8 @@ export default function AttractionExplorer({
     const QUEUE_SIZE = settings.explorerQueueSize; // Dynamic from user settings
     const BATCH_SIZE = config.RECOMMENDATION_COUNT; // Server-defined recommendation batch size.
 
-    const [searchConfirmation, setSearchConfirmation] = useState<{
+    const [paymentConfirmation, setPaymentConfirmation] = useState<{
+        mode: PaymentMode;
         query: string;
         totalCost: number;
         targetTab: TabType;
@@ -67,6 +69,8 @@ export default function AttractionExplorer({
     const [isLoadingMore, setIsLoadingMore] = useState(false);   // Manual load more
     const [isWaitingForBuffer, setIsWaitingForBuffer] = useState(false); // User clicked load more but buffer empty
     const [targetCount, setTargetCount] = useState(12);          // Expected total count for progress indicator
+    const [batchCredits, setBatchCredits] = useState<{ attraction: number; food: number }>({ attraction: 0, food: 0 });
+    const batchCreditsRef = useRef(batchCredits);
 
     // Data States
     const [results, setResults] = useState<{ attraction: AttractionRecommendation[], food: AttractionRecommendation[] }>({
@@ -121,6 +125,31 @@ export default function AttractionExplorer({
         }
     }, [isOpen, currentStops, mode, initialLocation]);
 
+    const getBatchCost = () => config.ATTRACTION_SEARCH_COST * (1 + QUEUE_SIZE);
+
+    const getRemainingBatchCredits = (tab: TabType) => batchCreditsRef.current[tab];
+    const setBatchCreditsImmediate = (tab: TabType, value: number) => {
+        const next = { ...batchCreditsRef.current, [tab]: value };
+        batchCreditsRef.current = next;
+        setBatchCredits(next);
+    };
+    const addBatchCreditsImmediate = (tab: TabType, delta: number) => {
+        setBatchCreditsImmediate(tab, batchCreditsRef.current[tab] + delta);
+    };
+
+    const logBatchState = (stage: string, tab: TabType) => {
+        console.log('[ExplorerBatch]', {
+            stage,
+            tab,
+            batchSize: BATCH_SIZE,
+            queueSize: QUEUE_SIZE,
+            batchCredits: batchCreditsRef.current[tab],
+            resultsCount: results[tab].length,
+            bufferCount: buffer[tab].length,
+            preloadingTab
+        });
+    };
+
     // =================================================================
     // Pre-fetching Logic
     // =================================================================
@@ -134,9 +163,13 @@ export default function AttractionExplorer({
         // that gets hijacked into results, causing double items.
         if (isLoadingMore) return;
 
+        const remainingCredits = getRemainingBatchCredits(activeTab);
+        if (remainingCredits <= 0) return;
+
         // Buffer Target: We want to keep QUEUE_SIZE batches (approx BATCH_SIZE * QUEUE_SIZE items) in reserve
         const bufferLen = buffer[activeTab].length;
-        const BUFFER_TARGET = BATCH_SIZE * QUEUE_SIZE;
+        const queueTargetBatches = Math.min(QUEUE_SIZE, remainingCredits);
+        const BUFFER_TARGET = BATCH_SIZE * queueTargetBatches;
         const isCurrentTabPreloading = preloadingTab === activeTab;
 
         // If buffer is low and we aren't currently fetching, fetch more in background
@@ -183,6 +216,10 @@ export default function AttractionExplorer({
         if (!isMounted.current) return;
 
         const currentTab = activeTab;
+        if (getRemainingBatchCredits(currentTab) <= 0) {
+            logBatchState('prefetch_blocked_quota', currentTab);
+            return;
+        }
 
         // Prevent duplicate loads for SAME tab
         if (preloadingTab === currentTab) return;
@@ -206,6 +243,8 @@ export default function AttractionExplorer({
                 }));
             }
         };
+
+        logBatchState('prefetch_start', currentTab);
 
         try {
             // Exclude everything we know about
@@ -244,6 +283,7 @@ export default function AttractionExplorer({
         } catch (e) {
             console.error("Background fetch failed", e);
         } finally {
+            logBatchState('prefetch_end', currentTab);
             if (isMounted.current) {
                 // Only clear if WE were the one preloading this tab
                 setPreloadingTab(prev => (prev === currentTab ? null : prev));
@@ -270,13 +310,30 @@ export default function AttractionExplorer({
     const handleLoadMore = async () => {
         if (isLoadingMore) return; // Prevent multiple concurrent loads
 
-        setIsLoadingMore(true);
-        // Sync ref immediately for the active stream callback to see
-        isLoadingMoreRef.current = true;
-
         const currentTab = activeTab;
         const currentBuffer = buffer[currentTab];
         const flushedCount = currentBuffer.length;
+        logBatchState('load_more_clicked', currentTab);
+
+        const remainingCredits = getRemainingBatchCredits(currentTab);
+        if (remainingCredits <= 0) {
+            setPaymentConfirmation({
+                mode: 'loadMore',
+                query: lastSearchLocation,
+                totalCost: getBatchCost(),
+                targetTab: currentTab
+            });
+            logBatchState('load_more_paywall', currentTab);
+            return;
+        }
+
+        // Consume one batch credit for this load-more action
+        addBatchCreditsImmediate(currentTab, -1);
+        logBatchState('load_more_consume_credit', currentTab);
+
+        setIsLoadingMore(true);
+        // Sync ref immediately for the active stream callback to see
+        isLoadingMoreRef.current = true;
 
         // 1. Flush Buffer to Results Immediately
         // Whether full batch or partial, show them NOW.
@@ -297,6 +354,7 @@ export default function AttractionExplorer({
         if (flushedCount >= BATCH_SIZE) {
             setIsLoadingMore(false);
             isLoadingMoreRef.current = false;
+            logBatchState('load_more_flushed_full_batch', currentTab);
             return;
         }
 
@@ -305,8 +363,11 @@ export default function AttractionExplorer({
         // and automatically start pushing the REST of the items to `results`.
         // The useEffect will handle turning off isLoadingMore when preloadingTab becomes null.
         if (preloadingTab === currentTab) {
+            logBatchState('load_more_hijack_stream', currentTab);
             return;
         }
+
+        // No extra paywall here; we already consumed a credit above
 
         // 4. If NO Preloading Active (or preloading wrong tab):
         // Start a new fetch. Since `isLoadingMore` is true, `fetchNextBatchBackground`
@@ -315,6 +376,7 @@ export default function AttractionExplorer({
 
         setIsLoadingMore(false);
         isLoadingMoreRef.current = false;
+        logBatchState('load_more_fetch_complete', currentTab);
     };
 
     // =================================================================
@@ -342,13 +404,15 @@ export default function AttractionExplorer({
         if (isNewSearch) {
             // Points Deduction Logic
             // Base cost (1 batch) + Preload cost (QUEUE_SIZE batches)
-            const totalCost = config.ATTRACTION_SEARCH_COST * (1 + QUEUE_SIZE);
+            const totalCost = getBatchCost();
 
-            setSearchConfirmation({
+            setPaymentConfirmation({
+                mode: 'search',
                 query,
                 totalCost,
                 targetTab
             });
+            logBatchState('search_confirm_modal', targetTab);
             return; // Stop here, wait for modal confirmation
         }
 
@@ -358,26 +422,41 @@ export default function AttractionExplorer({
     };
 
     const executeConfirmedSearch = async () => {
-        if (!searchConfirmation) return;
-        const { query, totalCost, targetTab } = searchConfirmation;
+        if (!paymentConfirmation || paymentConfirmation.mode !== 'search') return;
+        const { query, targetTab } = paymentConfirmation;
 
-        setSearchConfirmation(null); // Close modal
+        setPaymentConfirmation(null); // Close modal
 
         // Update UI state for search
         setLastSearchLocation(query);
         setResults(prev => ({ ...prev, [targetTab]: [] }));
         setBuffer(prev => ({ ...prev, [targetTab]: [] }));
         setIsWaitingForBuffer(false);
+        setBatchCreditsImmediate(targetTab, 1 + QUEUE_SIZE);
+        logBatchState('search_confirmed', targetTab);
 
         // Security: Pass user ID to backend via service
         // Note: Service handles cost calculation (backend), we just pass credentials
         executeSearchLogic(query, targetTab, true, user?.email);
     };
 
+    const executeConfirmedLoadMore = async () => {
+        if (!paymentConfirmation || paymentConfirmation.mode !== 'loadMore') return;
+        const { targetTab } = paymentConfirmation;
+
+        setPaymentConfirmation(null);
+        addBatchCreditsImmediate(targetTab, 1 + QUEUE_SIZE);
+        logBatchState('load_more_confirmed', targetTab);
+
+        await handleLoadMore();
+    };
+
 
 
     const executeSearchLogic = async (query: string, targetTab: TabType, isNewSearch: boolean, userId?: string) => {
         setInitialLoading(true);
+        addBatchCreditsImmediate(targetTab, -1);
+        logBatchState('search_stream_start', targetTab);
 
         try {
             // Initial fetch only excludes current stops (results are empty)
@@ -426,6 +505,7 @@ export default function AttractionExplorer({
                 lang,
                 titleLanguage
             );
+            logBatchState('search_stream_end', targetTab);
 
         } catch (e) {
             console.error(e);
@@ -481,7 +561,7 @@ export default function AttractionExplorer({
     return (
         <div className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 animate-in fade-in duration-300">
             {/* Premium Confirmation Modal */}
-            {searchConfirmation && (
+            {paymentConfirmation && (
                 <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300">
                         {/* Header Gradient */}
@@ -491,10 +571,12 @@ export default function AttractionExplorer({
                             </div>
                             <h3 className="text-xl font-bold relative z-10 flex items-center gap-2">
                                 <Sparkles className="w-5 h-5" />
-                                {t('explorer.open_title')}
+                                {paymentConfirmation.mode === 'loadMore' ? t('explorer.load_more_title') : t('explorer.open_title')}
                             </h3>
                             <p className="text-brand-100 text-sm mt-1 relative z-10">
-                                {t('explorer.open_desc', { target: searchConfirmation.targetTab === 'food' ? t('explorer.target_food') : t('explorer.target_attraction') })}
+                                {paymentConfirmation.mode === 'loadMore'
+                                    ? t('explorer.load_more_desc', { target: paymentConfirmation.targetTab === 'food' ? t('explorer.target_food') : t('explorer.target_attraction') })
+                                    : t('explorer.open_desc', { target: paymentConfirmation.targetTab === 'food' ? t('explorer.target_food') : t('explorer.target_attraction') })}
                             </p>
                         </div>
 
@@ -504,7 +586,7 @@ export default function AttractionExplorer({
                                 <div className="text-gray-500 text-sm">{t('explorer.search_target')}</div>
                                 <div className="font-bold text-gray-900 flex items-center gap-2">
                                     <MapPin className="w-4 h-4 text-brand-500" />
-                                    {searchConfirmation.query}
+                                    {paymentConfirmation.query}
                                 </div>
                             </div>
 
@@ -524,11 +606,11 @@ export default function AttractionExplorer({
                                         <Coins className="w-5 h-5" />
                                         {isSubscribed ? (
                                             <>
-                                                <span className="line-through text-gray-400 text-base mr-2">{searchConfirmation.totalCost}</span>
+                                                <span className="line-through text-gray-400 text-base mr-2">{paymentConfirmation.totalCost}</span>
                                                 <span>{t('explorer.member_free')}</span>
                                             </>
                                         ) : (
-                                            searchConfirmation.totalCost
+                                            paymentConfirmation.totalCost
                                         )}
                                     </span>
                                 </div>
@@ -543,8 +625,8 @@ export default function AttractionExplorer({
                                 <ArrowRight className="w-4 h-4 text-gray-400" />
                                 <div className="flex flex-col items-end">
                                     <span className="text-gray-500 text-xs">{t('explorer.remaining_balance')}</span>
-                                    <span className={`font-bold ${!isSubscribed && (balance - searchConfirmation.totalCost < 0) ? 'text-red-600' : 'text-brand-600'}`}>
-                                        {isSubscribed ? balance : balance - searchConfirmation.totalCost}
+                                    <span className={`font-bold ${!isSubscribed && (balance - paymentConfirmation.totalCost < 0) ? 'text-red-600' : 'text-brand-600'}`}>
+                                        {isSubscribed ? balance : balance - paymentConfirmation.totalCost}
                                     </span>
                                 </div>
                             </div>
@@ -552,16 +634,16 @@ export default function AttractionExplorer({
                             {/* Action Buttons */}
                             <div className="grid grid-cols-2 gap-3 mt-8">
                                 <button
-                                    onClick={() => setSearchConfirmation(null)}
+                                    onClick={() => setPaymentConfirmation(null)}
                                     className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
                                 >
                                     {t('explorer.cancel')}
                                 </button>
 
-                                {(balance < searchConfirmation.totalCost && !isSubscribed) ? (
+                                {(balance < paymentConfirmation.totalCost && !isSubscribed) ? (
                                     <button
                                         onClick={() => {
-                                            setSearchConfirmation(null);
+                                            setPaymentConfirmation(null);
                                             openPurchaseModal();
                                         }}
                                         className="px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
@@ -571,7 +653,7 @@ export default function AttractionExplorer({
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={executeConfirmedSearch}
+                                        onClick={paymentConfirmation.mode === 'loadMore' ? executeConfirmedLoadMore : executeConfirmedSearch}
                                         className="px-4 py-2.5 rounded-xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-200 flex items-center justify-center gap-2"
                                     >
                                         {t('explorer.confirm_pay')}

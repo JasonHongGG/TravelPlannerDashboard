@@ -210,6 +210,8 @@
     "explorer": {
         "open_title": "Start AI Exploration",
         "open_desc": "AI will analyze and recommend the best {{target}} for you",
+        "load_more_title": "Load More Recommendations",
+        "load_more_desc": "AI will generate more {{target}} recommendations for you",
         "target_attraction": "Attractions",
         "target_food": "Food",
         "search_target": "Search Target",

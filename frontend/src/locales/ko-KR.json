@@ -210,6 +210,8 @@
     "explorer": {
         "open_title": "AI 탐색 시작",
         "open_desc": "AI가 분석하여 최고의 {{target}}을(를) 추천합니다",
+        "load_more_title": "추천 더 불러오기",
+        "load_more_desc": "AI가 {{target}} 추천을 추가로 제공합니다",
         "target_attraction": "명소",
         "target_food": "맛집",
         "search_target": "검색 대상",
