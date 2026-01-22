@@ -18,10 +18,22 @@ export const safeRender = (content: any): React.ReactNode => {
 export const parseCostToNumber = (costStr: string | undefined): number => {
   if (!costStr) return 0;
   // Remove commas and non-numeric chars except digits
-  const clean = costStr.replace(/,/g, ''); 
+  const clean = costStr.replace(/,/g, '');
   const match = clean.match(/(\d+)/);
   if (match) {
     return parseInt(match[0], 10);
   }
-  return 0;
+};
+
+// Map i18n code to display name
+export const formatLanguage = (lng: string | undefined): string => {
+  if (!lng) return '';
+  switch (lng) {
+    case 'en-US': return 'English';
+    case 'ja-JP': return '日本語';
+    case 'ko-KR': return '한국어';
+    case 'zh-TW': return '繁體中文';
+    case 'zh-CN': return '简体中文';
+    default: return lng; // Fallback to code
+  }
 };

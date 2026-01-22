@@ -127,6 +127,7 @@ export interface SharedTripMeta {
   title: string;
   destination: string;
   coverImage?: string;
+  language?: string;
   dateRange: string;
   days: number;
   createdAt: number;

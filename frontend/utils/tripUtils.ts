@@ -39,21 +39,34 @@ export const calculateTripCost = (dateRange: string, baseCost = 50, dailyCost = 
     return baseCost + (days * dailyCost);
 };
 
-export const getTripCover = (trip: Trip): string => {
+// Flexible interface to support both Trip (local) and SharedTripMeta (gallery)
+interface TripCoverInput {
+    id: string; // or tripId
+    input?: { destination: string }; // Local Trip structure
+    destination?: string; // SharedTripMeta structure
+    customCoverImage?: string; // Local
+    coverImage?: string; // Shared
+}
+
+export const getTripCover = (trip: any, size: 'large' | 'small' = 'large'): string => {
     if (!trip) return '';
 
     // 1. Priority: Custom User Upload
-    if (trip.customCoverImage) {
-        return trip.customCoverImage;
+    const customImage = trip.customCoverImage || trip.coverImage;
+    if (customImage) {
+        return customImage;
     }
 
-    if (!trip.input || !trip.input.destination) return '';
+    // Resolve destination
+    const destination = trip.destination || trip.input?.destination;
+    if (!destination) return '';
 
-    const city = trip.input.destination.split(',')[0].trim();
+    const city = destination.split(',')[0].trim();
+    const tripId = trip.tripId || trip.id || 'default';
 
     // Deterministic random based on Trip ID
     // We sum the char codes of the trip ID to get a pseudo-random seed
-    const seed = trip.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const seed = tripId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
 
     const keywords = ["scenery", "architecture", "landmark", "skyline", "nature", "beach"];
     const index = seed % keywords.length;
@@ -61,5 +74,10 @@ export const getTripCover = (trip: Trip): string => {
 
     // Append negative keywords to verify strict compliance with user request
     const query = `${city} ${keyword} -map -people -person -chart -text`;
-    return `https://th.bing.com/th?q=${encodeURIComponent(query)}&w=1920&h=1080&c=7&rs=1&p=0`;
+
+    // Size optimization
+    const width = size === 'large' ? 1920 : 400;
+    const height = size === 'large' ? 1080 : 300;
+
+    return `https://th.bing.com/th?q=${encodeURIComponent(query)}&w=${width}&h=${height}&c=7&rs=1&p=0`;
 };

@@ -3,6 +3,9 @@ import { Heart, Eye, Calendar, MapPin, User } from 'lucide-react';
 import type { SharedTripMeta } from '../types';
 import { tripShareService } from '../services/TripShareService';
 
+import { getTripCover } from '../utils/tripUtils';
+import { formatLanguage } from '../utils/formatters';
+
 interface TripPreviewCardProps {
     trip: SharedTripMeta;
     onSelect: (tripId: string) => void;
@@ -29,7 +32,7 @@ export default function TripPreviewCard({ trip, onSelect }: TripPreviewCardProps
         }
     };
 
-    const coverImage = trip.coverImage || `https://th.bing.com/th?q=${encodeURIComponent(trip.destination + ' travel')}&w=400&h=300&c=7`;
+    const coverImage = getTripCover(trip, 'small');
 
     return (
         <div
@@ -83,6 +86,10 @@ export default function TripPreviewCard({ trip, onSelect }: TripPreviewCardProps
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
                         <MapPin className="w-3.5 h-3.5 text-gray-400" />
                         <span className="truncate">{trip.destination}</span>
+                        <span className="text-gray-300">•</span>
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {formatLanguage(trip.language || 'zh-TW')}
+                        </span>
                         <span className="text-gray-300">•</span>
                         <Calendar className="w-3.5 h-3.5 text-gray-400" />
                         <span>{trip.days} 天</span>

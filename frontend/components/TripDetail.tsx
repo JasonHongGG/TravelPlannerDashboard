@@ -410,6 +410,31 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   // Construct a relevant image URL using Pollinations AI (Switched to Bing for variety)
   const headerImageUrl = getTripCover(trip);
 
+  // Centralized Cover Image Updater with Auto-Sync
+  const updateCoverImage = async (newUrl: string | undefined) => {
+    // 1. Update Local State Immediate (Optimistic UI)
+    if (onUpdateTripMeta) {
+      onUpdateTripMeta({ customCoverImage: newUrl });
+    }
+
+    // 2. Auto-Sync to Server if Shared
+    if (trip.serverTripId) {
+      // Create a temporary trip object with the new image for syncing
+      // We need to cast or construct carefully to satisfy the type
+      const updatedTrip = { ...trip, customCoverImage: newUrl };
+
+      try {
+        // Run in background, don't block UI
+        // visibility is required, use current or default to private (though if serverTripId exists, it has a visibility)
+        await tripShareService.saveTrip(updatedTrip, trip.visibility || 'private');
+        console.log('[TripDetail] Auto-synced cover image to server');
+      } catch (e) {
+        console.error('[TripDetail] Failed to auto-sync cover image:', e);
+        // Optional: show toast
+      }
+    }
+  };
+
   const handleEditCoverClick = () => {
     fileInputRef.current?.click();
   };
@@ -428,8 +453,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     const reader = new FileReader();
     reader.onload = (event) => {
       const result = event.target?.result as string;
-      if (result && onUpdateTripMeta) {
-        onUpdateTripMeta({ customCoverImage: result });
+      if (result) {
+        updateCoverImage(result);
         // Small delay to simulate processing and let state update
         setTimeout(() => setIsUploading(false), 500);
       } else {
@@ -441,9 +466,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   };
 
   const handleResetCover = () => {
-    if (onUpdateTripMeta) {
-      onUpdateTripMeta({ customCoverImage: undefined });
-    }
+    updateCoverImage(undefined);
   };
 
   const handleRandomizeCover = async () => {
@@ -462,7 +485,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       if (!response.ok) throw new Error('Failed to fetch cover');
       const data = await response.json();
       if (data?.url) {
-        onUpdateTripMeta({ customCoverImage: data.url });
+        updateCoverImage(data.url);
         return;
       }
     } catch (e) {
@@ -470,7 +493,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     }
 
     const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=0&t=${timestamp}`;
-    onUpdateTripMeta({ customCoverImage: fallbackUrl });
+    updateCoverImage(fallbackUrl);
   };
 
   return (

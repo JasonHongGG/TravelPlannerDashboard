@@ -69,9 +69,22 @@ export default function App() {
   };
 
   const handleViewGalleryTrip = (tripId: string) => {
-    // 導航到分享行程頁面
-    window.history.pushState({}, '', `/trip/${tripId}`);
+    // 導航到分享行程頁面，並記錄來源
+    window.history.pushState({ from: 'gallery' }, '', `/trip/${tripId}`);
     setRoute({ type: 'shared-trip', tripId });
+  };
+
+  const handleSharedTripBack = () => {
+    // 檢查歷史紀錄狀態
+    const state = window.history.state;
+    if (state && state.from === 'gallery') {
+      // 如果是從畫廊來的，執行瀏覽器上一頁（保留捲動位置）
+      window.history.back();
+      // 我們不需要手動 setView，因為 popstate 事件監聽器會處理路由變更
+    } else {
+      // 否則（直接連結進入），回到首頁
+      navigateHome();
+    }
   };
 
   const selectedTrip = trips.find(t => t.id === selectedTripId);
@@ -106,7 +119,7 @@ export default function App() {
       <>
         <SharedTripView
           tripId={route.tripId}
-          onBack={navigateHome}
+          onBack={handleSharedTripBack}
         />
         <PurchasePointsModal
           isOpen={isPurchaseModalOpen}
