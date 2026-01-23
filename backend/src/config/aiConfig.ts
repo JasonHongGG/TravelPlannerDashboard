@@ -274,7 +274,13 @@ export const constructRecommendationPrompt = (
     ? "(請使用當地語言，如日文、韓文)"
     : `(請使用 ${titleLanguage})`;
 
-  return `請針對目的地「${location}」推薦 ${count} 個${categoryPrompt}。
+  return `請針對使用者的搜尋關鍵字「${location}」推薦 ${count} 個${categoryPrompt}。
+  
+  【重要搜尋邏輯】
+  1. 此關鍵字可能是「地名」(如：新宿)，也可能是「特定類別」(如：新宿美術館、澀谷拉麵)。
+  2. 若關鍵字包含具體的類別（例如「美術館」、「公園」、「燒肉」），請**務必優先**推薦該類別的地點。
+  3. 不要只推薦大範圍的熱門景點，請根據關鍵字的語意進行精準推薦。比如使用者搜「美術館」，即便該區熱門的是百貨公司，你也應該優先給出美術館。
+
   考慮使用者的興趣：「${interests}」。
   請嚴格控制數量為 ${count} 個，不多也不少。
   ${excludePrompt}
