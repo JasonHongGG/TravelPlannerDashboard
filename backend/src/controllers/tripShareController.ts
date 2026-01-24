@@ -20,8 +20,9 @@ export function getTrip(req: Request, res: Response) {
     try {
         const tripId = getStringParam(req.params.tripId);
         const authUser = (req as Request & { user?: { email?: string } }).user;
+        const userIp = req.ip || req.socket.remoteAddress || 'unknown';
 
-        const trip = tripShareService.getTrip(tripId, authUser?.email);
+        const trip = tripShareService.getTrip(tripId, authUser?.email, userIp);
 
         if (!trip) {
             return res.status(404).json({ error: 'Trip not found or access denied' });

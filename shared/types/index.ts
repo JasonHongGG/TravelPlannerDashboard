@@ -115,6 +115,7 @@ export type TripVisibility = 'private' | 'public';
 export interface Engagement {
   type: 'view' | 'like';
   userId?: string;
+  userIp?: string;
   timestamp: number;
 }
 
