@@ -200,6 +200,24 @@ class TripShareService {
         const baseUrl = window.location.origin;
         return `${baseUrl}/trip/${tripId}`;
     }
+
+    async exportTripJson(tripData: Trip): Promise<Blob> {
+        const response = await fetch(`${API_BASE_URL}/api/trips/export/json`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ tripData })
+        });
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                throw new Error('Subscription required');
+            }
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to export trip');
+        }
+
+        return await response.blob();
+    }
 }
 
 export const tripShareService = new TripShareService();

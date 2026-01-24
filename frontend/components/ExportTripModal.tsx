@@ -60,7 +60,7 @@ export default function ExportTripModal({ isOpen, onClose, onExportJson, onExpor
                 {/* Options Grid */}
                 <div className="relative z-10 px-6 pb-8 space-y-4">
 
-                    {/* .hong Option (Recommended/Free) */}
+                    {/* .hong Option (Free) */}
                     <button
                         onClick={onExportHong}
                         className="group relative w-full flex items-center gap-4 p-5 rounded-2xl border-2 border-brand-100 bg-gradient-to-r from-brand-50/50 to-white hover:border-brand-500 hover:shadow-lg hover:shadow-brand-100/50 hover:-translate-y-0.5 transition-all duration-300 text-left"
@@ -88,28 +88,28 @@ export default function ExportTripModal({ isOpen, onClose, onExportJson, onExpor
 
                     {/* JSON Option (Pro) */}
                     <button
-                        onClick={isSubscribed ? onExportJson : undefined}
+                        onClick={isSubscribed ? onExportJson : onExportJson}
                         className={`group relative w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-300 text-left ${isSubscribed
-                                ? 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
-                                : 'border-gray-100 bg-gray-50/50 opacity-80 cursor-not-allowed grayscale-[0.3]'
+                            ? 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer'
+                            : 'border-gray-100 bg-gray-50/50 opacity-90 cursor-default'
                             }`}
                     >
                         <div className={`shrink-0 w-12 h-12 rounded-xl shadow-sm border flex items-center justify-center transition-transform duration-300 ${isSubscribed ? 'bg-white border-gray-200 group-hover:scale-110' : 'bg-gray-100 border-gray-200'
                             }`}>
-                            <FileJson className="w-6 h-6 text-gray-600" strokeWidth={2} />
+                            <FileJson className={`w-6 h-6 ${isSubscribed ? 'text-gray-600' : 'text-gray-400'}`} strokeWidth={2} />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-bold text-gray-900 text-lg">
+                                <h3 className={`font-bold text-lg ${isSubscribed ? 'text-gray-900' : 'text-gray-500'}`}>
                                     通用格式 .json
                                 </h3>
                                 {!isSubscribed && (
-                                    <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1">
+                                    <span className="px-2 py-0.5 bg-gray-200 text-gray-500 text-[10px] font-bold rounded-full tracking-wider uppercase flex items-center gap-1">
                                         <Crown className="w-3 h-3" /> PRO
                                     </span>
                                 )}
                             </div>
-                            <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                            <p className="text-xs text-gray-400 font-medium leading-relaxed">
                                 開放標準格式，可被其他程式讀取，<br className="hidden sm:block" />適合開發者或跨平台使用。
                             </p>
                         </div>
@@ -120,19 +120,19 @@ export default function ExportTripModal({ isOpen, onClose, onExportJson, onExpor
                             </div>
                         ) : (
                             <div className="shrink-0">
-                                <span className="text-xs font-bold text-brand-600 underline">升級解鎖</span>
+                                <div className="px-3 py-1.5 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-xs font-bold rounded-lg shadow-lg shadow-brand-200 hover:shadow-brand-300 hover:scale-105 transition-all flex items-center gap-1">
+                                    <Crown className="w-3 h-3" />
+                                    <span>升級解鎖</span>
+                                </div>
                             </div>
                         )}
                     </button>
 
                     {!isSubscribed && (
                         <div className="text-center pt-2">
-                            <button
-                                onClick={onExportJson} // This will trigger the parent's logic to show promo modal usually
-                                className="text-xs text-gray-400 hover:text-brand-600 transition-colors font-medium"
-                            >
-                                為什麼我不能使用 JSON 格式？
-                            </button>
+                            <p className="text-xs text-gray-400 mb-2">
+                                升級會員即可無限次匯出並享有更多進階功能
+                            </p>
                         </div>
                     )}
 

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { getTripCover } from '../utils/tripUtils';
 import TripCard from './dashboard/TripCard';
 import { usePoints } from '../context/PointsContext';
+import { tripShareService } from '../services/TripShareService';
 import ProFeaturePromoModal from './ProFeaturePromoModal';
 import ExportTripModal from './ExportTripModal';
 
@@ -56,17 +57,40 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
     };
 
     if (format === 'json') {
+      // JSON export requires subscription (Backend Validation)
+      // Note: We still keep frontend check for UX, but now we also call backend
       if (!isSubscribed) {
         setExportModalState({ isOpen: false, trip: null });
         setIsPromoModalOpen(true);
         return;
       }
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tripToExport, null, 2));
-      const fileName = `trip_${trip.title || 'backup'}_${new Date().toISOString().slice(0, 10)}.json`;
-      downloadFile(dataStr, fileName);
+      try {
+        const blob = await tripShareService.exportTripJson(tripToExport);
+        const fileName = `trip_${trip.title || 'backup'}_${new Date().toISOString().slice(0, 10)}.json`;
+
+        // Download logic
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+      } catch (error: any) {
+        console.error("Export failed:", error);
+        if (error.message === 'Subscription required') {
+          setExportModalState({ isOpen: false, trip: null });
+          setIsPromoModalOpen(true);
+        } else {
+          alert("匯出失敗，請稍後再試: " + error.message);
+        }
+      }
+
     } else {
-      // .hong format (encrypted)
+      // .hong format (encrypted) is FREE
       try {
         const { encryptData } = await import('../utils/encryptionUtils');
         const encryptedContent = await encryptData(tripToExport);
@@ -113,10 +137,8 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
       return;
     }
 
-    if (isJson && !isSubscribed) {
-      setIsPromoModalOpen(true);
-      return;
-    }
+    // Permission Check Removed: Import is now free for everyone (JSON & HONG)
+    // if (isJson && !isSubscribed) { ... }
 
     const reader = new FileReader();
     reader.onload = async (event) => {

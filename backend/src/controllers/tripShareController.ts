@@ -317,3 +317,45 @@ export function decryptTrip(req: Request, res: Response) {
         res.status(400).json({ error: 'Invalid or corrupted file' });
     }
 }
+
+// ==========================================
+// Export Endpoints
+// ==========================================
+
+import { readUsers } from '../services/data/userStore';
+
+export function exportTripJson(req: Request, res: Response) {
+    try {
+        const { tripData } = req.body;
+        const authUser = (req as Request & { user?: { email?: string } }).user;
+
+        if (!authUser?.email) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        if (!tripData) {
+            return res.status(400).json({ error: 'tripData is required' });
+        }
+
+        // Backend Validation: Check Subscription
+        const users = readUsers();
+        const user = users[authUser.email.toLowerCase()]; // Keys are usually lowercased
+
+        if (!user || !user.subscription || !user.subscription.active) {
+            console.warn(`[TripShareController] Blocked JSON export for unauthorized user: ${authUser.email}`);
+            return res.status(403).json({ error: 'Subscription required for JSON export.' });
+        }
+
+        // If valid, return the JSON data
+        // We set headers to force download
+        const filename = `trip_${tripData.title || 'export'}.json`;
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+        res.setHeader('Content-Type', 'application/json');
+
+        res.json(tripData);
+
+    } catch (error: any) {
+        console.error('[TripShareController] Export error:', error);
+        res.status(500).json({ error: 'Export failed' });
+    }
+}
