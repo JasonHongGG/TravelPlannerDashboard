@@ -439,29 +439,32 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    // Validate size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert("圖片大小請小於 2MB"); // TODO: i18n
+    // Validate size (max 20MB pre-compression)
+    if (file.size > 20 * 1024 * 1024) {
+      alert("圖片原始大小請小於 20MB");
       return;
     }
 
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        updateCoverImage(result);
-        // Small delay to simulate processing and let state update
-        setTimeout(() => setIsUploading(false), 500);
-      } else {
-        setIsUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+
+    // Dynamic import to use the new utility
+    try {
+      const { resizeImage } = await import('../utils/imageUtils');
+      const compressedDataUrl = await resizeImage(file, 1920, 1080, 0.8);
+
+      updateCoverImage(compressedDataUrl);
+    } catch (err) {
+      console.error("Image processing failed", err);
+      alert("圖片處理失敗");
+    } finally {
+      // Small delay to simulate processing and let state update
+      setTimeout(() => setIsUploading(false), 500);
+    }
+
     e.target.value = ''; // Reset input
   };
 
@@ -473,15 +476,21 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     if (!onUpdateTripMeta) return;
 
     // Expanded list of keywords for variety
-    const keywords = ["landmark", "landscape", "street view", "aerial view", "architecture", "night view", "nature", "tourism", "skyline", "scenery", "historic", "culture", "daytime", "vacation"];
+    const keywords = ["landmark", "landscape", "street view", "aerial view", "architecture", "night view", "nature", "tourism", "skyline", "scenery", "historic", "culture", "daytime", "vacation", "panoramic", "travel", "sightseeing"];
+
+    // 1. Pick a random keyword
     const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
+
+    // 2. Generate a random "page" index to get different results for same keyword
+    // Bing thumbnail API often treats 'p' or offset in query nicely
+    const randomPage = Math.floor(Math.random() * 10);
+
     const city = trip.input.destination.split(',')[0].trim();
-    // Add timestamp to ensure uniqueness in React state even if keyword repeats
     const timestamp = Date.now();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
     try {
-      const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(city + ' ' + randomKeyword)}&t=${timestamp}`);
+      const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(city + ' ' + randomKeyword)}&t=${timestamp}&p=${randomPage}`);
       if (!response.ok) throw new Error('Failed to fetch cover');
       const data = await response.json();
       if (data?.url) {
@@ -492,7 +501,8 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
       console.warn('Cover lookup failed, falling back to Bing thumbnail', e);
     }
 
-    const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=0&t=${timestamp}`;
+    const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=${randomPage}&t=${timestamp}`;
+
     updateCoverImage(fallbackUrl);
   };
 

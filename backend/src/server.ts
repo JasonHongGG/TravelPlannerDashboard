@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for high-res cover images
 
 // Request logging middleware
 app.use((req, res, next) => {

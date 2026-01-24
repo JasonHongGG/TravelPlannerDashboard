@@ -5,6 +5,7 @@ import UserProfileMenu from './UserProfileMenu';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Plus, Map, Upload, ArrowRight, MoreHorizontal, Clock, Sparkles, Globe, Compass } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getTripCover } from '../utils/tripUtils';
 import TripCard from './dashboard/TripCard';
 import { usePoints } from '../context/PointsContext';
 import ProFeaturePromoModal from './ProFeaturePromoModal';
@@ -46,6 +47,14 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
     const trip = exportModalState.trip;
     if (!trip) return;
 
+    // Bake the current cover image into the exported data
+    // This ensures consistency even if the Trip ID changes on import
+    const currentCover = getTripCover(trip);
+    const tripToExport = {
+      ...trip,
+      customCoverImage: trip.customCoverImage || currentCover
+    };
+
     if (format === 'json') {
       if (!isSubscribed) {
         setExportModalState({ isOpen: false, trip: null });
@@ -53,14 +62,14 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
         return;
       }
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(trip, null, 2));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tripToExport, null, 2));
       const fileName = `trip_${trip.title || 'backup'}_${new Date().toISOString().slice(0, 10)}.json`;
       downloadFile(dataStr, fileName);
     } else {
       // .hong format (encrypted)
       try {
         const { encryptData } = await import('../utils/encryptionUtils');
-        const encryptedContent = await encryptData(trip);
+        const encryptedContent = await encryptData(tripToExport);
         const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(encryptedContent);
         const fileName = `trip_${trip.title || 'backup'}_${new Date().toISOString().slice(0, 10)}.hong`;
         downloadFile(dataStr, fileName);
