@@ -74,6 +74,47 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
+  // Validate Server Status on Open (Privacy/Sync Check)
+  useEffect(() => {
+    // Only validate if we think it's shared/synced and we are the owner (not shared view)
+    if (!trip.serverTripId || isSharedView) return;
+
+    const validateServerStatus = async () => {
+      try {
+        // Fetch fresh trip data from server
+        // This implicitly checks existence and access
+        const sharedTrip = await tripShareService.getTrip(trip.serverTripId!);
+
+        // 1. Check Visibility Mismatch
+        if (sharedTrip.visibility !== trip.visibility && onUpdateTripMeta) {
+          console.log(`[TripDetail] Syncing visibility mismatch. Server: ${sharedTrip.visibility}, Local: ${trip.visibility}`);
+          onUpdateTripMeta({ visibility: sharedTrip.visibility });
+        }
+
+        // 2. Check if we are still the owner? 
+        // (Rare case: unshared and reshared by someone else?) 
+        // We assume serverTripId is unique enough.
+
+      } catch (error: any) {
+        console.warn("[TripDetail] Server validation failed:", error);
+
+        // If 404/403, it means it's no longer valid on server.
+        // We should treat it as "Not Shared" locally.
+        if (error.message.includes('not found') || error.message.includes('Access denied') || error.message.includes('Unauthorized')) {
+          console.log("[TripDetail] Trip not found on server. Reverting to private local state.");
+          if (onUpdateTripMeta) {
+            // Remove server association
+            onUpdateTripMeta({
+              serverTripId: undefined,
+              visibility: undefined // or 'private' depending on type definition, usually undefined implies local private
+            });
+          }
+        }
+      }
+    };
+
+    validateServerStatus();
+  }, [trip.serverTripId, isSharedView]); // Run when serverTripId changes (e.g. initial load)
 
   // Listen for Server Updates (Bidirectional Sync) & Connection Health Check
   useEffect(() => {
@@ -664,9 +705,9 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           {trip.serverTripId && (
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors select-none ${connectionStatus === 'disconnected' ? 'bg-red-50 text-red-600 border border-red-100' :
-                  isSyncing ? 'bg-brand-50 text-brand-600' :
-                    connectionStatus === 'connecting' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
-                      'bg-white border border-brand-100 text-brand-600'
+                isSyncing ? 'bg-brand-50 text-brand-600' :
+                  connectionStatus === 'connecting' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
+                    'bg-white border border-brand-100 text-brand-600'
                 }`}
               title={
                 connectionStatus === 'disconnected' ? (t('trip.offline') || '離線') :

@@ -6,6 +6,7 @@ import { usePoints } from '../context/PointsContext';
 import { useAuth } from '../context/AuthContext';
 import { calculateTripCost } from '../utils/tripUtils';
 
+
 export const useTripManager = () => {
   const { balance, openPurchaseModal, isSubscribed } = usePoints();
   const { user } = useAuth();
@@ -25,6 +26,84 @@ export const useTripManager = () => {
   useEffect(() => {
     localStorage.setItem('ai_travel_trips', JSON.stringify(trips));
   }, [trips]);
+
+  // Sync Cloud Trips when user logs in
+  useEffect(() => {
+    const syncCloudTrips = async () => {
+      if (!user?.email) return;
+
+      // Optional: Restrict to Pro members if desired, though prompt implies "sync feature" is for Pro.
+      // If we want to allow free users to access their own shared trips, we can remove this check.
+      // But based on "cloud synchronization feature... allow Pro members", we'll keep it safe.
+      // Update: User said "Pro members... allow to access and sync".
+      if (!isSubscribed) return;
+
+      try {
+        console.log('[TripManager] Syncing cloud trips...');
+        const serverTripIds = await tripShareService.getMySharedTripIds();
+        console.log('[TripManager] Found cloud trips:', serverTripIds);
+
+        if (serverTripIds.length === 0) return;
+
+        // Find trips that are on server but NOT locally
+        // We check against both local ID and serverTripId
+        const missingTripIds = serverTripIds.filter(serverId => {
+          return !trips.some(t => t.id === serverId || t.serverTripId === serverId);
+        });
+
+        if (missingTripIds.length === 0) {
+          console.log('[TripManager] All cloud trips are already synced.');
+          return;
+        }
+
+        console.log(`[TripManager] Found ${missingTripIds.length} missing cloud trips. Fetching...`);
+
+        const newTrips: Trip[] = [];
+
+        for (const tripId of missingTripIds) {
+          try {
+            const sharedTrip = await tripShareService.getTrip(tripId);
+
+            // STRICT CONSTRAINT: Only sync trips *they have shared* (owned by them)
+            // Backend sets ownerId to email.
+            if (sharedTrip.ownerId.toLowerCase() === user.email.toLowerCase()) {
+              const tripData = sharedTrip.tripData;
+
+              // Ensure critical fields are set to link correctly
+              tripData.serverTripId = sharedTrip.tripId;
+              tripData.visibility = sharedTrip.visibility;
+
+              // If ID collision happens (rare but possible if logic changes), generate new ID?
+              // But here we want to restore *exact* trip if possible.
+              // If local ID matches server ID, great. If not, simple import.
+              // tripData already has an ID.
+
+              // Verify again it's not in trips (just in case)
+              if (!trips.some(t => t.id === tripData.id)) {
+                newTrips.push(tripData);
+              }
+            }
+          } catch (fetchErr) {
+            console.error(`[TripManager] Failed to fetch shared trip ${tripId}`, fetchErr);
+          }
+        }
+
+        if (newTrips.length > 0) {
+          console.log(`[TripManager] Importing ${newTrips.length} cloud trips.`);
+          setTrips(prev => [...prev, ...newTrips]);
+        }
+
+      } catch (err) {
+        console.error('[TripManager] Cloud sync failed', err);
+      }
+    };
+
+    syncCloudTrips();
+    // Depends on user.email and isSubscribed. 
+    // We intentionally don't include 'trips' in dependency to avoid loops, 
+    // although the logic checks validity inside. 
+    // We only want this to run when User connects (Login).
+  }, [user?.email, isSubscribed]);
 
   const createTrip = async (input: TripInput) => {
     const newTrip: Trip = {
@@ -152,43 +231,6 @@ export const useTripManager = () => {
     return newTrip;
   };
 
-  // Sync cleanup: Delete orphaned trips from server that no longer exist locally
-  const syncWithServer = async () => {
-    if (!user?.email) return;
-
-    try {
-      // Get list of trip IDs the user has shared on the server
-      const serverTripIds = await tripShareService.getMySharedTripIds();
-
-      if (serverTripIds.length === 0) return;
-
-      // Get local trip IDs (both id and serverTripId)
-      const localTripIds = new Set<string>();
-      trips.forEach(trip => {
-        localTripIds.add(trip.id);
-        if (trip.serverTripId) {
-          localTripIds.add(trip.serverTripId);
-        }
-      });
-
-      // Find orphaned trips (on server but not locally)
-      const orphanedTripIds = serverTripIds.filter(id => !localTripIds.has(id));
-
-      // Delete orphaned trips from server
-      for (const tripId of orphanedTripIds) {
-        console.log(`[TripManager] Cleaning up orphaned trip from server: ${tripId}`);
-        await tripShareService.deleteServerTrip(tripId);
-      }
-
-      if (orphanedTripIds.length > 0) {
-        console.log(`[TripManager] Cleaned up ${orphanedTripIds.length} orphaned trip(s) from server`);
-      }
-    } catch (error) {
-      console.error('[TripManager] Error syncing with server:', error);
-      // Don't throw - this is a background cleanup task
-    }
-  };
-
   return {
     trips,
     createTrip,
@@ -196,7 +238,6 @@ export const useTripManager = () => {
     updateTrip,
     deleteTrip,
     importTrip,
-    retryTrip,
-    syncWithServer
+    retryTrip
   };
 };

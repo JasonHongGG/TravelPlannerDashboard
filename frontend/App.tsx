@@ -25,7 +25,7 @@ function parseRoute(): { type: 'home' | 'shared-trip' | 'gallery', tripId?: stri
 }
 
 export default function App() {
-  const { trips, createTrip, updateTripData, updateTrip, deleteTrip, importTrip, retryTrip, syncWithServer } = useTripManager();
+  const { trips, createTrip, updateTripData, updateTrip, deleteTrip, importTrip, retryTrip } = useTripManager();
   const { isPurchaseModalOpen, closePurchaseModal } = usePoints();
 
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -95,11 +95,14 @@ export default function App() {
   const { user, isLoading } = useAuth(); // Access user state
 
   // Sync with server when user logs in to clean up orphaned trips
+  // REMOVED: dangerous to delete trips based on local state (wipes data on new device)
+  /*
   useEffect(() => {
     if (user && !isLoading) {
       syncWithServer();
     }
   }, [user, isLoading]);
+  */
 
   if (isLoading) {
     return (
