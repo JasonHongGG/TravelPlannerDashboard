@@ -49,7 +49,6 @@ export const SYSTEM_INSTRUCTION = `
 *   **具體描述**：不要只寫「參觀淺草寺」，要寫「穿著和服雷門拍照，品嚐仲見世通的人形燒與炸肉餅」。
 *   **量化資訊**：準確的停留時間、交通方式與預估費用。
 *   **分類標籤**：準確標記該地點的類型（如美食、景點、自然）。
-*   **互動連結**：Google Maps Search Link 與 Directions Link。
 
 【結構化輸出 JSON Schema】
 Format:
@@ -77,8 +76,6 @@ Format:
           "openHours": "e.g., 09:00 - 17:00",
           "transport": "e.g., 🚄 Shinkansen (2.5hr) or 🚶 Walk 10min (Use Target Language)",
           "costEstimate": "e.g., ¥2000",
-          "placeLink": "https://www.google.com/maps/search/?api=1&query={EncodedName}",
-          "routeLinkToNext": "https://www.google.com/maps/dir/?api=1&origin={OriginName}&destination={DestName}&travelmode={mode}",
           "notes": "Rich description here in Target Language. Mention specific foods, photo spots, or tips.",
           "alternatives": ["Alt Option 1", "Alt Option 2"]
         }

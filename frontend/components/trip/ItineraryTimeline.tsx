@@ -6,6 +6,7 @@ import { getStopIcon, TransportIcon } from '../../utils/icons';
 import { Clock, Info, MapPin, Navigation, Sparkles, ClipboardCheck, Check, ChevronDown, ListChecks, Edit2, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TimePickerWheel from '../ui/TimePickerWheel';
+import { getGoogleMapsSearchLink, getGoogleMapsDirectionsLink } from '../../utils/mapUtils';
 
 interface Props {
    dayData: TripDay | undefined;
@@ -190,10 +191,12 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onUpdateStop, 
             {dayData.stops?.map((stop, idx) => {
                const StopIcon = getStopIcon(stop);
                const prevStop = idx > 0 ? dayData.stops[idx - 1] : null;
-               // Use the routeLinkToNext from the previous stop, or construct a generic one
+
+               // Dynamic Link Generation
                const navigationUrl = prevStop
-                  ? (prevStop.routeLinkToNext || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(prevStop.name)}&destination=${encodeURIComponent(stop.name)}&travelmode=transit`)
+                  ? getGoogleMapsDirectionsLink(prevStop.name, stop.name)
                   : null;
+               const placeUrl = getGoogleMapsSearchLink(stop.name);
 
                return (
                   <div key={idx} className="relative pl-16 pb-12 last:pb-0 group">
@@ -306,9 +309,9 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onUpdateStop, 
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                           {stop.placeLink && (
+                           {placeUrl && (
                               <a
-                                 href={stop.placeLink}
+                                 href={placeUrl}
                                  target="_blank"
                                  rel="noreferrer"
                                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded-md"
