@@ -237,9 +237,24 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onUpdateStop, 
                      {/* Card */}
                      <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow hover:border-brand-200 relative">
                         <div className="flex justify-between items-start gap-4 mb-3">
-                           <h3 className="text-xl font-bold text-gray-900 leading-snug">
-                              {safeRender(stop.name)}
-                           </h3>
+                           <div className="flex-1 flex items-center gap-2 group/title">
+                              <h3 className="text-xl font-bold text-gray-900 leading-snug">
+                                 {safeRender(stop.name)}
+                              </h3>
+                              {onUpdateStop && editingStopIdx !== idx && (
+                                 <button
+                                    onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleStartEdit(idx, stop);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 group-hover/title:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-full"
+                                    title={t('common.edit')}
+                                 >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                 </button>
+                              )}
+                           </div>
+
                            <div className="text-right flex-shrink-0 flex items-center gap-2">
                               {editingStopIdx === idx ? (
                                  <div className="flex items-center gap-1">
@@ -266,23 +281,9 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onUpdateStop, 
                                     </button>
                                  </div>
                               ) : (
-                                 <>
-                                    <div className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">
-                                       {safeRender(stop.costEstimate)}
-                                    </div>
-                                    {onUpdateStop && (
-                                       <button
-                                          onClick={(e) => {
-                                             e.stopPropagation();
-                                             handleStartEdit(idx, stop);
-                                          }}
-                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-full"
-                                          title={t('common.edit')}
-                                       >
-                                          <Edit2 className="w-3.5 h-3.5" />
-                                       </button>
-                                    )}
-                                 </>
+                                 <div className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">
+                                    {safeRender(stop.costEstimate)}
+                                 </div>
                               )}
                            </div>
                         </div>
