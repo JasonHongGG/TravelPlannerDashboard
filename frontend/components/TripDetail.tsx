@@ -315,6 +315,32 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     performFeasibilityCheck(context, executeExplorerUpdate);
   };
 
+  const handleUpdateStop = (dayIdx: number, stopIdx: number, updates: Partial<TripStop>) => {
+    if (!trip.data) return;
+
+    const newDays = [...(trip.data.days || [])];
+    const day = { ...newDays[dayIdx] };
+    const stops = [...day.stops];
+    stops[stopIdx] = { ...stops[stopIdx], ...updates };
+
+    // Auto-sort by start time ensures chronological order
+    stops.sort((a, b) => {
+      const tA = a.startTime || '00:00';
+      const tB = b.startTime || '00:00';
+      return tA.localeCompare(tB);
+    });
+
+    day.stops = stops;
+    newDays[dayIdx] = day;
+
+    const updatedTripData = {
+      ...trip.data,
+      days: newDays
+    };
+
+    onUpdateTrip(trip.id, updatedTripData);
+  };
+
   // Error State
   if (trip.status === 'error') {
     return (
@@ -762,6 +788,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                   <ItineraryTimeline
                     dayData={currentDayData}
                     onFocusStop={handleFocusStop}
+                    onUpdateStop={(stopIdx, updates) => {
+                      const idx = days.findIndex(d => d.day === selectedDay);
+                      if (idx !== -1) handleUpdateStop(idx, stopIdx, updates);
+                    }}
                     onExplore={() => setIsExplorerOpen(true)}
                   />
                 </div>

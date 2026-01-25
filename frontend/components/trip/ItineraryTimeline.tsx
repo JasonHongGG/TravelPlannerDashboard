@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { TripDay, TripStop } from '../../types';
 import { safeRender } from '../../utils/formatters';
 import { getStopIcon, TransportIcon } from '../../utils/icons';
-import { Clock, Info, MapPin, Navigation, Sparkles, ClipboardCheck, Check, ChevronDown, ListChecks } from 'lucide-react';
+import { Clock, Info, MapPin, Navigation, Sparkles, ClipboardCheck, Check, ChevronDown, ListChecks, Edit2, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import TimePickerWheel from '../ui/TimePickerWheel';
 
 interface Props {
    dayData: TripDay | undefined;
    onFocusStop: (stop: TripStop) => void;
+   onUpdateStop?: (stopIdx: number, updates: Partial<TripStop>) => void;
    onExplore?: () => void;
 }
 
@@ -43,9 +45,37 @@ const ChecklistItem: React.FC<{ text: string }> = ({ text }) => {
    );
 };
 
-export default function ItineraryTimeline({ dayData, onFocusStop, onExplore }: Props) {
+export default function ItineraryTimeline({ dayData, onFocusStop, onUpdateStop, onExplore }: Props) {
    const { t } = useTranslation();
    const [isChecklistOpen, setIsChecklistOpen] = useState(true);
+   const [editingStopIdx, setEditingStopIdx] = useState<number | null>(null);
+   const [editValues, setEditValues] = useState<Partial<TripStop>>({});
+   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+
+   const handleStartEdit = (idx: number, stop: TripStop) => {
+      setEditingStopIdx(idx);
+      setEditValues({
+         startTime: stop.startTime,
+         costEstimate: stop.costEstimate
+      });
+      setIsTimePickerOpen(false);
+   };
+
+   const handleSaveEdit = (idx: number) => {
+      if (onUpdateStop && editValues) {
+         onUpdateStop(idx, editValues);
+      }
+      setEditingStopIdx(null);
+      setEditValues({});
+      setIsTimePickerOpen(false);
+   };
+
+   const handleCancelEdit = () => {
+      setEditingStopIdx(null);
+      setEditValues({});
+      setIsTimePickerOpen(false);
+   };
+
    if (!dayData) {
       return (
          <div className="text-center py-20 text-gray-500">
@@ -174,9 +204,28 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onExplore }: P
 
                      {/* Time & Transport Header */}
                      <div className="flex items-center gap-3 mb-3">
-                        <span className="font-mono text-lg font-bold text-gray-900 bg-transparent">
-                           {safeRender(stop.startTime)}
-                        </span>
+                        {editingStopIdx === idx ? (
+                           <div className="relative">
+                              <button
+                                 onClick={() => setIsTimePickerOpen(!isTimePickerOpen)}
+                                 className="font-mono text-lg font-bold text-gray-900 bg-white border border-brand-300 rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm min-w-[80px] text-center hover:bg-brand-50 transition-colors"
+                              >
+                                 {editValues.startTime || '00:00'}
+                              </button>
+                              {isTimePickerOpen && (
+                                 <TimePickerWheel
+                                    value={editValues.startTime || '00:00'}
+                                    onChange={(val) => setEditValues({ ...editValues, startTime: val })}
+                                    onClose={() => setIsTimePickerOpen(false)}
+                                 />
+                              )}
+                           </div>
+                        ) : (
+                           <span className="font-mono text-lg font-bold text-gray-900 bg-transparent">
+                              {safeRender(stop.startTime)}
+                           </span>
+                        )}
+
                         {stop.transport && (
                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded-full shadow-sm">
                               <TransportIcon text={safeRender(stop.transport) as string} />
@@ -191,8 +240,50 @@ export default function ItineraryTimeline({ dayData, onFocusStop, onExplore }: P
                            <h3 className="text-xl font-bold text-gray-900 leading-snug">
                               {safeRender(stop.name)}
                            </h3>
-                           <div className="text-right flex-shrink-0">
-                              <div className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">{safeRender(stop.costEstimate)}</div>
+                           <div className="text-right flex-shrink-0 flex items-center gap-2">
+                              {editingStopIdx === idx ? (
+                                 <div className="flex items-center gap-1">
+                                    <input
+                                       type="text"
+                                       value={editValues.costEstimate || ''}
+                                       onChange={(e) => setEditValues({ ...editValues, costEstimate: e.target.value })}
+                                       className="text-sm font-bold text-brand-600 bg-white border border-brand-300 px-2 py-1 rounded-md w-24 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                                       placeholder="Cost"
+                                    />
+                                    <button
+                                       onClick={() => handleSaveEdit(idx)}
+                                       className="p-1 text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                                       title={t('common.save')}
+                                    >
+                                       <Save className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                       onClick={handleCancelEdit}
+                                       className="p-1 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                                       title={t('common.cancel')}
+                                    >
+                                       <X className="w-4 h-4" />
+                                    </button>
+                                 </div>
+                              ) : (
+                                 <>
+                                    <div className="text-sm font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-md">
+                                       {safeRender(stop.costEstimate)}
+                                    </div>
+                                    {onUpdateStop && (
+                                       <button
+                                          onClick={(e) => {
+                                             e.stopPropagation();
+                                             handleStartEdit(idx, stop);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50 rounded-full"
+                                          title={t('common.edit')}
+                                       >
+                                          <Edit2 className="w-3.5 h-3.5" />
+                                       </button>
+                                    )}
+                                 </>
+                              )}
                            </div>
                         </div>
 
