@@ -55,8 +55,8 @@ export default function TripPreviewCard({ trip, onSelect }: TripPreviewCardProps
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
 
                 {/* Hover Overlay with View Button */}
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white shadow-lg transition-opacity duration-200">
+                <div className="absolute inset-0 bg-black/30 opacity-[0.01] group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="p-3 rounded-full bg-white/20 border border-white/30 text-white shadow-lg transform-gpu">
                         <Eye className="w-6 h-6" strokeWidth={2} />
                     </div>
                 </div>
