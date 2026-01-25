@@ -7,7 +7,10 @@ const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 export class TravelAIService {
 
     private getAuthHeaders(): Record<string, string> {
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'X-Correlation-ID': crypto.randomUUID()
+        };
         const token = localStorage.getItem('google_auth_token');
         if (token) headers['Authorization'] = `Bearer ${token}`;
         return headers;

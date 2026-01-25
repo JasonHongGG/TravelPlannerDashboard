@@ -10,7 +10,8 @@ class TripShareService {
     private getAuthHeaders(): HeadersInit {
         const token = localStorage.getItem('google_auth_token');
         const headers: HeadersInit = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Correlation-ID': crypto.randomUUID()
         };
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
