@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Trip, TripData, TripMeta, TripStop, Message, TripVisibility } from '../types';
-import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle, Share2, Cloud } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Calendar, Clock, DollarSign, PanelRightClose, PanelRightOpen, Map as MapIcon, Loader2, Camera, ImagePlus, Shuffle, Share2, Cloud, WifiOff } from 'lucide-react';
 import Assistant from './Assistant';
 import { aiService } from '../services'; // Import singleton service
 import { safeRender } from '../utils/formatters';
@@ -73,37 +73,63 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
   // Sharing State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
 
-  // Listen for Server Updates (Bidirectional Sync)
+  // Listen for Server Updates (Bidirectional Sync) & Connection Health Check
   useEffect(() => {
-    // If in SharedView, the parent (SharedTripView) handles the subscription to prevent race conditions
-    // We only need this self-subscription when acting as the Creator (Dashboard view)
-    if (!trip.serverTripId || isSharedView) return;
+    // If in SharedView, the parent (SharedTripView) handles subscription.
+    // If local only (TripDetail in Dashboard), we handle it.
+    if (!trip.serverTripId || isSharedView) {
+      setConnectionStatus('connected'); // Assume connected if local or managed by parent (simplification)
+      return;
+    }
 
-    const handleServerEvent = async (type: string, data: any) => {
-      // console.log('[TripDetail] Received event:', type, data);
+    let eventSource: EventSource | null = null;
+    let heartbeatTimer: NodeJS.Timeout;
 
-      if (type === 'trip_updated' || type === 'visibility_updated') {
-        try {
-          // Fetch latest data to ensure consistency
-          const sharedTrip = await tripShareService.getTrip(trip.serverTripId!);
-          if (sharedTrip?.tripData?.data) {
-            // Update local state directly using prop (avoiding auto-save loop)
-            onUpdateTrip(trip.id, sharedTrip.tripData.data);
-
-            // Also update meta if needed (e.g. visibility changed remotely)
-            if (onUpdateTripMeta && sharedTrip.visibility !== trip.visibility) {
-              onUpdateTripMeta({ visibility: sharedTrip.visibility });
+    const setupConnection = () => {
+      const handleServerEvent = async (type: string, data: any) => {
+        if (type === 'trip_updated' || type === 'visibility_updated') {
+          try {
+            const sharedTrip = await tripShareService.getTrip(trip.serverTripId!);
+            if (sharedTrip?.tripData?.data) {
+              onUpdateTrip(trip.id, sharedTrip.tripData.data);
+              if (onUpdateTripMeta && sharedTrip.visibility !== trip.visibility) {
+                onUpdateTripMeta({ visibility: sharedTrip.visibility });
+              }
             }
+          } catch (e) {
+            console.error('[TripDetail] Failed to sync remote changes', e);
           }
-        } catch (e) {
-          console.error('[TripDetail] Failed to sync remote changes', e);
         }
-      }
+      };
+
+      eventSource = tripShareService.subscribeToTrip(trip.serverTripId!, handleServerEvent);
+
+      // Update status based on native events
+      eventSource.onopen = () => setConnectionStatus('connected');
+      eventSource.onerror = () => setConnectionStatus('disconnected'); // Will likely auto-reconnect
     };
 
-    const eventSource = tripShareService.subscribeToTrip(trip.serverTripId, handleServerEvent);
-    return () => eventSource.close();
+    setupConnection();
+
+    // Heartbeat: Check readyState every 5 seconds
+    heartbeatTimer = setInterval(() => {
+      if (eventSource) {
+        if (eventSource.readyState === EventSource.OPEN) {
+          setConnectionStatus('connected');
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          setConnectionStatus('connecting');
+        } else {
+          setConnectionStatus('disconnected');
+        }
+      }
+    }, 5000);
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearInterval(heartbeatTimer);
+    };
   }, [trip.serverTripId, onUpdateTrip, trip.id, trip.visibility]);
 
   // Handle visibility change (private <-> public)
@@ -637,18 +663,30 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
           {/* Sync to Cloud Status Indicator (Cleaned) */}
           {trip.serverTripId && (
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors select-none ${isSyncing
-                ? 'bg-brand-50 text-brand-600'
-                : 'bg-white border border-brand-100 text-brand-600'}`}
-              title={isSyncing ? (t('trip.syncing') || '同步中') : (t('trip.synced') || '同步')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors select-none ${connectionStatus === 'disconnected' ? 'bg-red-50 text-red-600 border border-red-100' :
+                  isSyncing ? 'bg-brand-50 text-brand-600' :
+                    connectionStatus === 'connecting' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
+                      'bg-white border border-brand-100 text-brand-600'
+                }`}
+              title={
+                connectionStatus === 'disconnected' ? (t('trip.offline') || '離線') :
+                  isSyncing ? (t('trip.syncing') || '同步中') :
+                    connectionStatus === 'connecting' ? (t('trip.connecting') || '連線中...') :
+                      (t('trip.synced') || '同步')
+              }
             >
-              {isSyncing ? (
+              {connectionStatus === 'disconnected' ? (
+                <WifiOff className="w-3.5 h-3.5" />
+              ) : (isSyncing || connectionStatus === 'connecting') ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Cloud className="w-3.5 h-3.5" />
               )}
               <span className="hidden sm:inline">
-                {isSyncing ? (t('trip.syncing') || '同步中') : (t('trip.synced') || '同步')}
+                {connectionStatus === 'disconnected' ? (t('trip.offline') || '離線') :
+                  isSyncing ? (t('trip.syncing') || '同步中') :
+                    connectionStatus === 'connecting' ? (t('trip.connecting') || '連線中...') :
+                      (t('trip.synced') || '同步')}
               </span>
             </div>
           )}

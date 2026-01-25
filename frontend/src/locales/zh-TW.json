@@ -134,7 +134,9 @@
         "ai_planning": "AI 正在規劃行程...",
         "plan_desc": "正在根據您的需求調整路線與景點...",
         "synced": "同步",
-        "syncing": "同步中..."
+        "syncing": "同步中...",
+        "offline": "離線",
+        "connecting": "連線中..."
     },
     "trip_detail": {
         "tabs": {

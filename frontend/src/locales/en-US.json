@@ -134,7 +134,9 @@
         "ai_planning": "Planning your trip...",
         "plan_desc": "AI is adjusting route and attractions based on your request...",
         "synced": "Synced",
-        "syncing": "Syncing..."
+        "syncing": "Syncing...",
+        "offline": "Offline",
+        "connecting": "Connecting..."
     },
     "trip_detail": {
         "tabs": {
