@@ -15,6 +15,7 @@ import { useFeasibilityCheck } from '../hooks/useFeasibilityCheck';
 import DaySelector from './trip/DaySelector';
 import ItineraryTimeline from './trip/ItineraryTimeline';
 import BudgetView from './trip/BudgetView';
+import RiskAssessmentView from './trip/RiskAssessmentView';
 import TripMap from './trip/TripMap';
 import AttractionExplorer from './AttractionExplorer';
 import FeasibilityModal from './FeasibilityModal';
@@ -926,21 +927,10 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
 
             {/* 3. Risks View */}
             {activeTab === 'risks' && (
-              <div className="p-6 w-full max-w-5xl mx-auto">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <AlertTriangle className="text-orange-500" /> {t('trip.risks_title')}
-                  </h3>
-                  <ul className="space-y-3">
-                    {risks.map((risk, idx) => (
-                      <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 bg-orange-50 p-4 rounded-lg border border-orange-100">
-                        <span className="w-2 h-2 bg-orange-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span className="leading-relaxed">{safeRender(risk)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <RiskAssessmentView
+                risks={risks}
+                tripMeta={tripMeta}
+              />
             )}
 
           </div>
