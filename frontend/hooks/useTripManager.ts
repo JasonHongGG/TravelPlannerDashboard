@@ -129,11 +129,36 @@ export const useTripManager = () => {
     // Trigger AI Generation
     // SECURITY: We pass user.email to backend. Backend executes deduction based on ACTION.
     aiService.generateTrip(input, user?.email)
-      .then((data) => {
+      .then(async (data) => {
         // Success implies deduction was successful on server side
+
+        // Enhance: Fetch High-Res Cover Image immediately (The "New Method")
+        let hdCoverUrl: string | undefined;
+        try {
+          const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+          const city = input.destination.split(',')[0].trim();
+          // Use specific high-quality keywords
+          const query = `${city} landmark scenery high quality`;
+          const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(query)}`);
+          if (response.ok) {
+            const coverData = await response.json();
+            if (coverData?.url) {
+              hdCoverUrl = coverData.url;
+            }
+          }
+        } catch (e) {
+          console.warn("Initial HD cover fetch failed, falling back to default", e);
+        }
+
         setTrips(prev => prev.map(t =>
           t.id === newTrip.id
-            ? { ...t, status: 'complete', data, generationTimeMs: Date.now() - t.createdAt }
+            ? {
+              ...t,
+              status: 'complete',
+              data,
+              generationTimeMs: Date.now() - t.createdAt,
+              customCoverImage: hdCoverUrl // Set the HD cover immediately
+            }
             : t
         ));
       })
