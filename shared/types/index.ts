@@ -24,6 +24,8 @@ export interface TripStop {
   openHours: string;
   transport: string;
   costEstimate: string;
+  costAmount: number;
+  costCategory: 'transport' | 'dining' | 'tickets' | 'shopping' | 'accommodation' | 'other';
   placeLink: string;
   routeLinkToNext: string;
   notes: string;
@@ -42,15 +44,10 @@ export interface TripMeta {
   title?: string;
   dateRange: string;
   days: number;
-  budgetEstimate: {
-    transport?: number;
-    dining?: number;
-    tickets?: number;
-    other?: number;
-    total?: number;
-  };
+
   transportStrategy: string;
   pace: string;
+  budgetTargets?: Record<string, number>;
 }
 
 export interface TripData {

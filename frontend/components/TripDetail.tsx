@@ -756,7 +756,7 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
 
         {/* Left Column: Itinerary (Scrollable) */}
         {/* Adjusted width logic based on isMapOpen state */}
-        <div className={`flex flex-col scrollbar-hide bg-gray-50 overflow-y-auto transition-all duration-300 ease-in-out ${isMapOpen ? 'w-full lg:w-7/12 xl:w-1/2' : 'w-full'}`}>
+        <div className={`flex flex-col scrollbar-hide bg-gray-50 overflow-y-auto ${isMapOpen ? 'w-full lg:w-7/12 xl:w-1/2' : 'w-full'}`}>
           {/* Centered content class when map is closed */}
 
           {/* Header Image */}

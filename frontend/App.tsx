@@ -14,7 +14,7 @@ import PurchasePointsModal from './components/PurchasePointsModal';
 import { usePoints } from './context/PointsContext';
 
 // Protected Route Component
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -108,7 +108,7 @@ const TravelManager = () => {
 };
 
 // Public Route Wrapper for Login (redirects if already logged in)
-const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
+const PublicOnlyRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
   if (user) return <Navigate to="/dashboard" replace />;

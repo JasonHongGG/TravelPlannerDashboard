@@ -47,8 +47,8 @@ export const SYSTEM_INSTRUCTION = `
 行程需支援：日程切換、地點地圖點擊、站點間路線顯示。
 每一站點皆需提供：
 *   **具體描述**：不要只寫「參觀淺草寺」，要寫「穿著和服雷門拍照，品嚐仲見世通的人形燒與炸肉餅」。
-*   **量化資訊**：準確的停留時間、交通方式與預估費用。
-*   **分類標籤**：準確標記該地點的類型（如美食、景點、自然）。
+*   **量化資訊**：準確的停留時間、交通方式與預估費用 (含數值 clean integer)。
+*   **分類標籤**：準確標記該地點的類型與費用類別。
 
 【結構化輸出 JSON Schema】
 Format:
@@ -56,7 +56,6 @@ Format:
   "tripMeta": {
     "dateRange": "YYYY-MM-DD to YYYY-MM-DD",
     "days": 0,
-    "budgetEstimate": { "transport": 0, "dining": 0, "tickets": 0, "other": 0, "total": 0 },
     "transportStrategy": "e.g., JR Pass + Subway",
     "pace": "e.g., Moderate with early starts"
   },
@@ -75,7 +74,9 @@ Format:
           "endTime": "HH:MM",
           "openHours": "e.g., 09:00 - 17:00",
           "transport": "e.g., 🚄 Shinkansen (2.5hr) or 🚶 Walk 10min (Use Target Language)",
-          "costEstimate": "e.g., ¥2000",
+          "costEstimate": "e.g., ¥2000 (Display Text)",
+          "costAmount": 2000,
+          "costCategory": "Must be exactly one of: 'transport', 'dining', 'tickets', 'shopping', 'accommodation', 'other'",
           "notes": "Rich description here in Target Language. Mention specific foods, photo spots, or tips.",
           "alternatives": ["Alt Option 1", "Alt Option 2"]
         }
@@ -130,7 +131,8 @@ export const constructTripPrompt = (input: TripInput): string => {
     3. **Be Specific**: Do not just say "Lunch". Say "Lunch at [Restaurant Name] - try the fresh Tamagoyaki".
     4. **Be Logical**: Ensure travel times between stops are realistic. Group nearby attractions.
     5. **Be Fun**: Include "Pro Tips" or "Hidden Gems" in the notes.
-    6. **Categorization**: Ensure the 'type' field is accurate for each stop (e.g. 'nature' for parks, 'dining' for restaurants).
+    6. **Categorization**: Ensure the 'type' field is accurate.
+    7. **Costing**: Provide a numeric 'costAmount' (approximate single person cost in local currency, no symbols) and a valid 'costCategory' for EVERY stop.
     
     Ensure the response is valid JSON matching the schema defined in the system instruction.
   `;
@@ -200,6 +202,7 @@ export const constructUpdatePrompt = (
     - Maintain "Node Purity" (Specific Place Names only).
     - Ensure Dining stops (Lunch/Dinner) have specific restaurant names.
     - Ensure the 'type' field is correctly set.
+    - **Include 'costAmount' and 'costCategory' for any new or modified stops.**
   `;
 };
 
