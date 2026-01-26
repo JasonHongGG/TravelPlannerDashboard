@@ -27,6 +27,7 @@
     "react-dom": "^19.2.3",
     "react-i18next": "^16.5.3",
     "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.0",
     "recharts": "^3.6.0",
     "tsx": "^4.21.0"
   },

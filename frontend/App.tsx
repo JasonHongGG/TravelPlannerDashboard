@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Trip } from './types';
 import Dashboard from './components/Dashboard';
 import NewTripForm from './components/NewTripForm';
@@ -12,45 +13,34 @@ import LandingPage from './components/LandingPage';
 import PurchasePointsModal from './components/PurchasePointsModal';
 import { usePoints } from './context/PointsContext';
 
-// 解析 URL 路徑
-function parseRoute(): { type: 'home' | 'shared-trip' | 'gallery', tripId?: string } {
-  const path = window.location.pathname;
-  const tripMatch = path.match(/^\/trip\/(.+)$/);
-  if (tripMatch) {
-    return { type: 'shared-trip', tripId: tripMatch[1] };
-  }
-  if (path === '/gallery') {
-    return { type: 'gallery' };
-  }
-  return { type: 'home' };
-}
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
 
-export default function App() {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
+// Travel Manager Component (Dashboard Logic)
+const TravelManager = () => {
   const { trips, createTrip, updateTripData, updateTrip, deleteTrip, importTrip, retryTrip } = useTripManager();
   const { isPurchaseModalOpen, closePurchaseModal } = usePoints();
 
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [view, setView] = useState<'dashboard' | 'detail' | 'gallery'>('dashboard');
-
-  // URL 路由狀態
-  const [route, setRoute] = useState(parseRoute);
-
-  // 監聽瀏覽器的 popstate 事件（返回/前進按鈕）
-  useEffect(() => {
-    const handlePopState = () => {
-      setRoute(parseRoute());
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  // 導航到首頁
-  const navigateHome = () => {
-    window.history.pushState({}, '', '/');
-    setRoute({ type: 'home' });
-    setView('dashboard');
-  };
 
   const handleSelectTrip = (trip: Trip) => {
     setSelectedTripId(trip.id);
@@ -65,124 +55,131 @@ export default function App() {
     }
   };
 
-  const handleImportTrip = (tripData: Trip) => {
-    importTrip(tripData);
-  };
-
-  const handleViewGalleryTrip = (tripId: string) => {
-    // 導航到分享行程頁面，並記錄來源
-    window.history.pushState({ from: 'gallery' }, '', `/trip/${tripId}`);
-    setRoute({ type: 'shared-trip', tripId });
-  };
-
-  const handleSharedTripBack = () => {
-    // 檢查歷史紀錄狀態
-    const state = window.history.state;
-    if (state && state.from === 'gallery') {
-      // 如果是從畫廊來的，執行瀏覽器上一頁（保留捲動位置）
-      window.history.back();
-      // 我們不需要手動 setView，因為 popstate 事件監聽器會處理路由變更
-    } else {
-      // 否則（直接連結進入），回到首頁
-      navigateHome();
-    }
-  };
-
   const selectedTrip = trips.find(t => t.id === selectedTripId);
-
-  // Database initialized via singleton import
-  // React.useEffect(() => { ... });
-
-  const { user, isLoading } = useAuth(); // Access user state
-  const [showLogin, setShowLogin] = useState(false);
-
-  // Sync with server when user logs in to clean up orphaned trips
-  // REMOVED: dangerous to delete trips based on local state (wipes data on new device)
-  /*
-  useEffect(() => {
-    if (user && !isLoading) {
-      syncWithServer();
-    }
-  }, [user, isLoading]);
-  */
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Determine current view for authenticated users or public routes
-  // If not logged in and not in a public route (shared-trip/gallery), show Landing or Login
-  if (!user && route.type !== 'shared-trip') {
-    if (showLogin) {
-      return <LoginScreen />;
-    }
-    return <LandingPage onLoginClick={() => setShowLogin(true)} />;
-  }
-
-  // 如果是分享行程 URL，顯示 SharedTripView
-  if (route.type === 'shared-trip' && route.tripId) {
-    return (
-      <>
-        <SharedTripView
-          tripId={route.tripId}
-          onBack={handleSharedTripBack}
-        />
-        <PurchasePointsModal
-          isOpen={isPurchaseModalOpen}
-          onClose={closePurchaseModal}
-        />
-      </>
-    );
-  }
 
   return (
     <>
-      <>
-        {view === 'dashboard' && (
-          <Dashboard
-            trips={trips}
-            onNewTrip={() => setIsModalOpen(true)}
-            onSelectTrip={handleSelectTrip}
-            onDeleteTrip={handleDeleteTrip}
-            onImportTrip={handleImportTrip}
-            onRetryTrip={retryTrip}
-            onOpenGallery={() => setView('gallery')}
-          />
-        )}
-
-        {view === 'gallery' && (
-          <GalleryPage
-            onBack={() => setView('dashboard')}
-            onSelectTrip={handleViewGalleryTrip}
-          />
-        )}
-
-        {view === 'detail' && selectedTrip && (
-          <TripDetail
-            trip={selectedTrip}
-            onBack={() => setView('dashboard')}
-            onUpdateTrip={updateTripData}
-            onUpdateTripMeta={(updates) => updateTrip(selectedTrip.id, updates)}
-          />
-        )}
-
-        {isModalOpen && (
-          <NewTripForm
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onSubmit={createTrip}
-          />
-        )}
-
-        <PurchasePointsModal
-          isOpen={isPurchaseModalOpen}
-          onClose={closePurchaseModal}
+      {view === 'dashboard' && (
+        <Dashboard
+          trips={trips}
+          onNewTrip={() => setIsModalOpen(true)}
+          onSelectTrip={handleSelectTrip}
+          onDeleteTrip={handleDeleteTrip}
+          onImportTrip={importTrip}
+          onRetryTrip={retryTrip}
+          onOpenGallery={() => setView('gallery')}
         />
-      </>
+      )}
+
+      {view === 'gallery' && (
+        <GalleryPage
+          onBack={() => setView('dashboard')}
+          onSelectTrip={(tripId) => {
+            // For now, gallery selection within dashboard view might just act as preview or import
+            // If we want to navigate to the shared view:
+            window.open(`/trip/${tripId}`, '_blank');
+          }}
+        />
+      )}
+
+      {view === 'detail' && selectedTrip && (
+        <TripDetail
+          trip={selectedTrip}
+          onBack={() => setView('dashboard')}
+          onUpdateTrip={updateTripData}
+          onUpdateTripMeta={(updates) => updateTrip(selectedTrip.id, updates)}
+        />
+      )}
+
+      {isModalOpen && (
+        <NewTripForm
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={createTrip}
+        />
+      )}
+
+      <PurchasePointsModal
+        isOpen={isPurchaseModalOpen}
+        onClose={closePurchaseModal}
+      />
+    </>
+  );
+};
+
+// Public Route Wrapper for Login (redirects if already logged in)
+const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Intro / Landing Page */}
+        <Route path="/" element={
+          <PublicOnlyRoute>
+            <LandingPageWrapper />
+          </PublicOnlyRoute>
+        } />
+
+        {/* Login Page */}
+        <Route path="/login" element={
+          <PublicOnlyRoute>
+            <LoginScreen />
+          </PublicOnlyRoute>
+        } />
+
+        {/* Protected Dashboard */}
+        <Route path="/dashboard/*" element={
+          <ProtectedRoute>
+            <TravelManager />
+          </ProtectedRoute>
+        } />
+
+        {/* Shared Trip View (Public) */}
+        <Route path="/trip/:tripId" element={<SharedTripViewWrapper />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+// Wrapper to inject navigation into LandingPage props
+const LandingPageWrapper = () => {
+  const navigate = useNavigate();
+  return <LandingPage onLoginClick={() => navigate('/login')} />;
+}
+
+// Wrapper to handle params for SharedTripView
+const SharedTripViewWrapper = () => {
+  return <SharedTripViewWithParams />;
+}
+
+
+
+const SharedTripViewWithParams = () => {
+  const { tripId } = useParams<{ tripId: string }>();
+  const navigate = useNavigate();
+  const { isPurchaseModalOpen, closePurchaseModal } = usePoints();
+
+  if (!tripId) return <Navigate to="/" />;
+
+  return (
+    <>
+      <SharedTripView
+        tripId={tripId}
+        onBack={() => navigate('/')}
+      />
+      <PurchasePointsModal
+        isOpen={isPurchaseModalOpen}
+        onClose={closePurchaseModal}
+      />
     </>
   );
 }
