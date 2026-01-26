@@ -8,6 +8,7 @@ import SharedTripView from './components/SharedTripView';
 import { useTripManager } from './hooks/useTripManager';
 import { useAuth } from './context/AuthContext';
 import LoginScreen from './components/LoginScreen';
+import LandingPage from './components/LandingPage';
 import PurchasePointsModal from './components/PurchasePointsModal';
 import { usePoints } from './context/PointsContext';
 
@@ -93,6 +94,7 @@ export default function App() {
   // React.useEffect(() => { ... });
 
   const { user, isLoading } = useAuth(); // Access user state
+  const [showLogin, setShowLogin] = useState(false);
 
   // Sync with server when user logs in to clean up orphaned trips
   // REMOVED: dangerous to delete trips based on local state (wipes data on new device)
@@ -112,8 +114,13 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <LoginScreen />;
+  // Determine current view for authenticated users or public routes
+  // If not logged in and not in a public route (shared-trip/gallery), show Landing or Login
+  if (!user && route.type !== 'shared-trip') {
+    if (showLogin) {
+      return <LoginScreen />;
+    }
+    return <LandingPage onLoginClick={() => setShowLogin(true)} />;
   }
 
   // 如果是分享行程 URL，顯示 SharedTripView
