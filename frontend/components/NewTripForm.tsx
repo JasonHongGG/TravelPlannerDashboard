@@ -82,9 +82,9 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
       const getPromptLanguage = (lng: string) => {
         switch (lng) {
           case 'en-US': return 'English';
-          case 'ja-JP': return 'Japanese';
-          case 'ko-KR': return 'Korean';
-          default: return 'Traditional Chinese';
+          case 'ja-JP': return '日本語';
+          case 'ko-KR': return '한국어';
+          default: return '繁體中文';
         }
       };
       const currentLang = getPromptLanguage(i18n.language);
@@ -476,10 +476,10 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                   </label>
                   <PremiumDropdown
                     options={[
-                      { value: 'Traditional Chinese', label: '繁體中文' },
-                      { value: 'Japanese', label: '日本語' },
+                      { value: '繁體中文', label: '繁體中文' },
+                      { value: '日本語', label: '日本語' },
                       { value: 'English', label: 'English' },
-                      { value: 'Korean', label: '한국어' }
+                      { value: '한국어', label: '한국어' }
                     ]}
                     value={formData.language}
                     onChange={(val) => handleChange('language', val)}

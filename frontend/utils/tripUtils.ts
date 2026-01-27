@@ -68,16 +68,22 @@ export const getTripCover = (trip: any, size: 'large' | 'small' = 'large'): stri
     // We sum the char codes of the trip ID to get a pseudo-random seed
     const seed = tripId.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
 
-    const keywords = ["scenery", "architecture", "landmark", "skyline", "nature", "beach"];
-    const index = seed % keywords.length;
-    const keyword = keywords[index];
+    // Expanded keywords from Random Cover logic (TripDetail.tsx)
+    // Refined to "Safe" keywords that work for smaller locations (removed skyline, street view, etc.)
+    const keywords = ["landmark", "landscape", "nature", "tourism", "scenery", "historic", "culture", "daytime", "vacation", "panoramic", "travel", "sightseeing"];
+    const keywordIndex = seed % keywords.length;
+    const keyword = keywords[keywordIndex];
+
+    // Select index deterministically (0-19 for top 20 results)
+    // We use a secondary hash (seed + keywordIndex) to ensure it's not identical correlation
+    const index = (seed + keywordIndex) % 10;
 
     // Append negative keywords to verify strict compliance with user request
-    const query = `${city} ${keyword} -map -people -person -chart -text`;
+    const query = `${city} ${keyword}`;
 
-    // Size optimization
-    const width = size === 'large' ? 1920 : 400;
-    const height = size === 'large' ? 1080 : 300;
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
 
-    return `https://th.bing.com/th?q=${encodeURIComponent(query)}&w=${width}&h=${height}&c=7&rs=1&p=0`;
+    // Construct backend proxy URL
+    // We use redirect=true so this URL can be used directly in <img src>
+    return `${apiBaseUrl}/cover?query=${encodeURIComponent(query)}&redirect=true&index=${index}`;
 };

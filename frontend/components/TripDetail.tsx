@@ -624,8 +624,14 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     updateCoverImage(undefined);
   };
 
+  const [isCoverUpdating, setIsCoverUpdating] = useState(false);
+
+  // ... (handleEditCoverClick, handleFileChange logic remains same)
+
   const handleRandomizeCover = async () => {
     if (!onUpdateTripMeta) return;
+
+    setIsCoverUpdating(true); // Start loading
 
     // Expanded list of keywords for variety
     const keywords = ["landmark", "landscape", "street view", "aerial view", "architecture", "night view", "nature", "tourism", "skyline", "scenery", "historic", "culture", "daytime", "vacation", "panoramic", "travel", "sightseeing"];
@@ -641,21 +647,26 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
     const timestamp = Date.now();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
+    // Get current cover URL to exclude from selection
+    const currentCoverUrl = trip.customCoverImage || headerImageUrl;
+
     try {
-      const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(city + ' ' + randomKeyword)}&t=${timestamp}&p=${randomPage}`);
+      const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(city + ' ' + randomKeyword)}&t=${timestamp}&p=${randomPage}&exclude=${encodeURIComponent(currentCoverUrl)}`);
       if (!response.ok) throw new Error('Failed to fetch cover');
       const data = await response.json();
       if (data?.url) {
         updateCoverImage(data.url);
+        // Note: isCoverUpdating will be set false in finally block
         return;
       }
     } catch (e) {
       console.warn('Cover lookup failed, falling back to Bing thumbnail', e);
+      // Fallback
+      const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=${randomPage}&t=${timestamp}`;
+      updateCoverImage(fallbackUrl);
+    } finally {
+      setIsCoverUpdating(false); // Stop loading
     }
-
-    const fallbackUrl = `https://th.bing.com/th?q=${encodeURIComponent(city + ' ' + randomKeyword)}&w=1920&h=1080&c=7&rs=1&p=${randomPage}&t=${timestamp}`;
-
-    updateCoverImage(fallbackUrl);
   };
 
   return (
@@ -801,6 +812,16 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                 }}
               />
 
+              {/* Loading Overlay */}
+              {isCoverUpdating && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm z-30 transition-all duration-300">
+                  <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+                    <Loader2 className="w-10 h-10 text-white animate-spin mb-2 drop-shadow-lg" />
+                    <span className="text-white font-medium text-sm drop-shadow-md tracking-wide">Updating Cover...</span>
+                  </div>
+                </div>
+              )}
+
               {/* Navigation & Actions */}
               <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-10">
                 {/* Back button is in the sticky header, but we can add one here for full screen feel if needed, or just keep actions */}
@@ -827,10 +848,15 @@ export default function TripDetail({ trip, onBack, onUpdateTrip, onUpdateTripMet
                 {/* Randomize Button */}
                 <button
                   onClick={handleRandomizeCover}
-                  className="group/random flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-black/20 hover:bg-brand-500/80 text-white/90 hover:text-white rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 shadow-sm"
+                  disabled={isCoverUpdating}
+                  className="group/random flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-black/20 hover:bg-brand-500/80 text-white/90 hover:text-white rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   title={t('trip_detail.cover.random')}
                 >
-                  <Shuffle className="w-4 h-4 group-hover/random:rotate-180 transition-transform duration-500" />
+                  {isCoverUpdating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Shuffle className="w-4 h-4 group-hover/random:rotate-180 transition-transform duration-500" />
+                  )}
                 </button>
 
                 {/* Edit Button */}
