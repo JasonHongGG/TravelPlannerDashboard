@@ -9,6 +9,7 @@ import { calculateTripCost } from '../utils/tripUtils';
 import DateRangePicker from './DateRangePicker';
 import PaymentConfirmationModal from './PaymentConfirmationModal';
 import { useTranslation } from 'react-i18next';
+import PremiumDropdown from './PremiumDropdown';
 
 interface Props {
   isOpen: boolean;
@@ -373,20 +374,19 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                 </label>
 
                 <div className="w-full flex items-center bg-white border border-gray-300 rounded-xl shadow-sm focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/10 hover:border-gray-400 transition-all">
-                  <div className="relative shrink-0">
-                    <select
+                  <div className="relative shrink-0 w-24">
+                    <PremiumDropdown
+                      options={[
+                        { value: 'TWD', label: 'TWD' },
+                        { value: 'JPY', label: 'JPY' },
+                        { value: 'KRW', label: 'KRW' },
+                        { value: 'USD', label: 'USD' }
+                      ]}
                       value={formData.currency || 'TWD'}
-                      onChange={(e) => handleBudgetChange(budgetNum, e.target.value)}
-                      className="bg-transparent border-none text-sm font-bold text-gray-700 pl-4 pr-9 py-3 outline-none cursor-pointer hover:bg-gray-50 transition-colors appearance-none"
-                    >
-                      <option value="TWD">TWD</option>
-                      <option value="JPY">JPY</option>
-                      <option value="KRW">KRW</option>
-                      <option value="USD">USD</option>
-                    </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
+                      onChange={(val) => handleBudgetChange(budgetNum, val)}
+                      className="border-0 shadow-none hover:bg-transparent"
+                      placeholder="Currency"
+                    />
                   </div>
 
                   <div className="w-px h-6 bg-gray-200 mx-0"></div>
@@ -474,22 +474,18 @@ export default function NewTripForm({ isOpen, onClose, onSubmit }: Props) {
                     </div>
                     {t('new_trip.language')} <span className="text-red-500 text-xs font-bold">*</span>
                   </label>
-                  <div className="relative">
-                    <select
-                      className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 rounded-xl shadow-sm focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 hover:border-gray-400 transition-all font-medium appearance-none cursor-pointer"
-                      value={formData.language}
-                      onChange={(e) => handleChange('language', e.target.value)}
-                      required
-                    >
-                      <option value="Traditional Chinese">繁體中文</option>
-                      <option value="Japanese">日本語</option>
-                      <option value="English">English</option>
-                      <option value="Korean">한국어</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </div>
-                  </div>
+                  <PremiumDropdown
+                    options={[
+                      { value: 'Traditional Chinese', label: '繁體中文' },
+                      { value: 'Japanese', label: '日本語' },
+                      { value: 'English', label: 'English' },
+                      { value: 'Korean', label: '한국어' }
+                    ]}
+                    value={formData.language}
+                    onChange={(val) => handleChange('language', val)}
+                    placeholder={t('new_trip.language_placeholder')}
+                    icon={<Languages className="w-4 h-4" />}
+                  />
                 </div>
               </div>
 
