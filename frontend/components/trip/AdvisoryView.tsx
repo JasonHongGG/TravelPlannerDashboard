@@ -367,25 +367,36 @@ export default function AdvisoryView({ trip, loading, error, onGenerate, onUpdat
                     </div>
                 </div>
 
-                {/* 6. Local Lingo (Span 12) */}
-                {advisory.localLingo && (
-                    <div className="col-span-12">
-                        <div className="bg-white border border-gray-200 rounded-[2rem] p-8 shadow-sm">
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="p-2.5 bg-brand-50 text-brand-600 rounded-xl">
-                                    <Globe className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-800">生存語言包</h3>
+                {/* 6. Local Lingo (Span 12) - REDESIGNED DECK */}
+                <div className="col-span-12">
+                    <div className="bg-white border border-gray-200 rounded-[2rem] p-8 shadow-sm overflow-hidden">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2.5 bg-brand-50 text-brand-600 rounded-xl">
+                                <Globe className="w-6 h-6" />
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <LingoItem label="你好" content={advisory.localLingo.hello} />
-                                <LingoItem label="謝謝" content={advisory.localLingo.thankYou} />
-                                <LingoItem label="不好意思" content={advisory.localLingo.excuseMe} />
-                                <LingoItem label="好吃" content={advisory.localLingo.delicious} />
-                            </div>
+                            <h3 className="text-2xl font-bold text-gray-800">生存語言包</h3>
+                        </div>
+
+                        {/* Flashcards Deck (Horizontal Scrolling) */}
+                        <div className="flex gap-4 overflow-x-auto pb-6 -mx-2 px-2 snap-x snap-mandatory custom-scrollbar items-stretch">
+                            {Array.isArray(advisory.localLingo) ? (
+                                advisory.localLingo.map((item: any, i: number) => (
+                                    <div key={i} className="snap-start shrink-0 w-72 h-full">
+                                        <LingoFlashcard item={item} />
+                                    </div>
+                                ))
+                            ) : advisory.localLingo ? (
+                                // Fallback for old data format (legacy support)
+                                <>
+                                    <div className="snap-start shrink-0 w-72 h-full"><LingoFlashcard item={{ term: (advisory.localLingo as any).hello, translation: "你好", pronunciation: "Hello" }} /></div>
+                                    <div className="snap-start shrink-0 w-72 h-full"><LingoFlashcard item={{ term: (advisory.localLingo as any).thankYou, translation: "謝謝", pronunciation: "Thank You" }} /></div>
+                                    <div className="snap-start shrink-0 w-72 h-full"><LingoFlashcard item={{ term: (advisory.localLingo as any).excuseMe, translation: "不好意思", pronunciation: "Excuse Me" }} /></div>
+                                    <div className="snap-start shrink-0 w-72 h-full"><LingoFlashcard item={{ term: (advisory.localLingo as any).delicious, translation: "好吃", pronunciation: "Delicious" }} /></div>
+                                </>
+                            ) : null}
                         </div>
                     </div>
-                )}
+                </div>
 
             </div>
         </div>
@@ -395,6 +406,39 @@ export default function AdvisoryView({ trip, loading, error, onGenerate, onUpdat
 // ----------------------------------------------------------------------
 // Sub-Components
 // ----------------------------------------------------------------------
+
+function LingoFlashcard({ item }: { item: any }) {
+    return (
+        <div className="relative group p-6 rounded-2xl bg-white border border-gray-200 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-default flex flex-col justify-between h-full min-h-[160px] w-full">
+            {/* Pronunciation (Top) */}
+            <div className="text-sm font-medium text-gray-400 mb-2">
+                {item.pronunciation || "Pronunciation"}
+            </div>
+
+            {/* Main Term (Center Hero) */}
+            <div className="text-3xl font-black text-gray-800 tracking-tight mb-4 break-words leading-tight">
+                {item.term}
+            </div>
+
+            {/* Translation (Bottom) */}
+            <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+                <span className="text-base font-bold text-gray-600">{item.translation}</span>
+                {item.note && (
+                    <div className="group/note relative">
+                        <div className="p-1.5 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-help">
+                            <Info className="w-4 h-4" />
+                        </div>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full right-0 mb-3 w-48 p-3 bg-gray-900 text-white text-xs font-medium rounded-xl shadow-xl opacity-0 invisible group-hover/note:opacity-100 group-hover/note:visible transition-all z-20 pointer-events-none transform translate-y-2 group-hover/note:translate-y-0 duration-200">
+                            {item.note}
+                            <div className="absolute bottom-[-4px] right-3 w-2 h-2 bg-gray-900 rotate-45" />
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 // Premium Modal Component (Independent Scrolling, Redesigned Header, No Footer)
 const DetailModal = ({ isOpen, onClose, title, icon: Icon, data, colorTheme = 'indigo' }: any) => {

@@ -397,12 +397,14 @@ export const constructAdvisoryPrompt = (
         "essentials": ["List of essential items to pack in ${targetLanguage}"],
         "weatherSpecific": ["Items specific to weather in ${targetLanguage}"]
       },
-      "localLingo": {
-        "hello": "Local translation for Hello",
-        "thankYou": "Local translation for Thank You",
-        "excuseMe": "Local translation for Excuse Me",
-        "delicious": "Local translation for Delicious"
-      }
+      "localLingo": [
+        {
+          "term": "Local phrase (e.g. すみません)",
+          "translation": "Meaning in ${targetLanguage}",
+          "pronunciation": "Phonetic guide (e.g. Sumimasen)",
+          "note": "Brief usage context (e.g. Used for apologies or getting attention)"
+        }
+      ] // Provide exactly 10 most useful/essential survival phrases for this specific destination.
     }
   `;
 };

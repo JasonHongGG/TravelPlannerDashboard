@@ -97,11 +97,11 @@ export interface TripAdvisory {
     weatherSpecific: string[];
   };
   localLingo?: {
-    hello: string;
-    thankYou: string;
-    excuseMe: string;
-    delicious: string;
-  };
+    term: string;        // The phrase in local language
+    translation: string; // The meaning in target language
+    pronunciation: string; // Phonetic guide
+    note?: string;       // Context (e.g., "Polite form")
+  }[];
 
 }
 
