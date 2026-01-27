@@ -29,12 +29,23 @@ export const useTripDetail = (trip: Trip) => {
   };
 
   const handleFocusStop = (stop: TripStop) => {
-    const city = trip.input.destination;
-    const query = `${stop.name}, ${city}`;
-    setMapState({
-      url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
-      label: `📍 ${stop.name}`
-    });
+    // Check for valid coordinates
+    if (stop.lat && stop.lng && (stop.lat !== 0 || stop.lng !== 0)) {
+      const query = `${stop.lat},${stop.lng}`;
+      setMapState({
+        url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
+        label: `📍 ${stop.name}`
+      });
+    } else {
+      // Fallback to name search
+      const city = trip.input.destination;
+      const query = `${stop.name}, ${city}`;
+      setMapState({
+        url: `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
+        label: `📍 ${stop.name}`
+      });
+    }
+
     if (!isMapOpen) {
       setIsMapOpen(true);
     }

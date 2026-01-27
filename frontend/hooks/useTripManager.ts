@@ -141,35 +141,11 @@ export const useTripManager = () => {
     // Trigger AI Generation
     // SECURITY: We pass user.email to backend. Backend executes deduction based on ACTION.
     aiService.generateTrip(input, user?.email)
-      .then(async (data) => {
-        // Success implies deduction was successful on server side
-
-        // Try to fetch a potentially better one from API, but we already have a good one
-        let finalCoverUrl = initialHdCoverUrl;
-
-        try {
-          const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
-          const response = await fetch(`${apiBaseUrl}/cover?query=${encodeURIComponent(query)}&t=${timestamp}&p=${randomPage}`);
-
-          if (response.ok) {
-            const coverData = await response.json();
-            if (coverData?.url) {
-              finalCoverUrl = coverData.url;
-            }
-          }
-        } catch (e) {
-          // Ignore, we already have the fallback
-        }
+      .then((data) => {
 
         setTrips(prev => prev.map(t =>
           t.id === newTrip.id
-            ? {
-              ...t,
-              status: 'complete',
-              data,
-              generationTimeMs: Date.now() - t.createdAt,
-              customCoverImage: finalCoverUrl
-            }
+            ? { ...t, status: 'complete', data, generationTimeMs: Date.now() - t.createdAt }
             : t
         ));
       })
