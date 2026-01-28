@@ -241,15 +241,6 @@
         "back": "돌아가서 조정",
         "ignore": "무시하고 계속"
     },
-    "insufficient_points": {
-        "title": "에너지 부족",
-        "desc": "이 여행을 생성하려면 더 많은 포인트가 필요합니다. 지금 충전하여 탐험을 계속하세요.",
-        "current": "보유",
-        "required": "필요",
-        "missing": "부족",
-        "go_to_store": "충전소로 이동",
-        "later": "나중에"
-    },
     "history": {
         "title": "거래 내역",
         "subtitle": "포인트 상세 내역 보기",

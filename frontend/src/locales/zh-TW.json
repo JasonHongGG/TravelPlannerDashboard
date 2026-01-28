@@ -241,15 +241,6 @@
         "back": "返回調整",
         "ignore": "忽略並繼續"
     },
-    "insufficient_points": {
-        "title": "能量不足",
-        "desc": "生成此行程需要更多點數，立即補充以繼續您的探索旅程。",
-        "current": "持有",
-        "required": "需要",
-        "missing": "不足",
-        "go_to_store": "前往儲值中心",
-        "later": "稍後再說"
-    },
     "history": {
         "title": "交易歷史紀錄",
         "subtitle": "查看您的點數變動明細",

@@ -241,15 +241,6 @@
         "back": "戻って調整",
         "ignore": "無視して続行"
     },
-    "insufficient_points": {
-        "title": "エネルギー不足",
-        "desc": "この旅程を生成するにはさらにポイントが必要です。チャージして探索を続けましょう。",
-        "current": "現在",
-        "required": "必要",
-        "missing": "不足",
-        "go_to_store": "ストアへ移動",
-        "later": "後で"
-    },
     "history": {
         "title": "取引履歴",
         "subtitle": "ポイント履歴を表示",

@@ -241,15 +241,6 @@
         "back": "Back to Adjust",
         "ignore": "Ignore and Continue"
     },
-    "insufficient_points": {
-        "title": "Insufficient Energy",
-        "desc": "More points are required to generate this trip. Top up now to continue your journey.",
-        "current": "Current",
-        "required": "Required",
-        "missing": "Missing",
-        "go_to_store": "Go to Store",
-        "later": "Maybe Later"
-    },
     "history": {
         "title": "Transaction History",
         "subtitle": "View your points details",
