@@ -36,7 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
 // Travel Manager Component (Dashboard Logic)
 const TravelManager = () => {
   const { trips, createTrip, updateTripData, updateTrip, deleteTrip, importTrip, retryTrip } = useTripManager();
-  const { isPurchaseModalOpen, closePurchaseModal } = usePoints();
+  const { isPurchaseModalOpen, closePurchaseModal, initialTab } = usePoints();
 
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,6 +102,7 @@ const TravelManager = () => {
       <PurchasePointsModal
         isOpen={isPurchaseModalOpen}
         onClose={closePurchaseModal}
+        initialTab={initialTab}
       />
     </>
   );
@@ -166,7 +167,7 @@ const SharedTripViewWrapper = () => {
 const SharedTripViewWithParams = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
-  const { isPurchaseModalOpen, closePurchaseModal } = usePoints();
+  const { isPurchaseModalOpen, closePurchaseModal, initialTab } = usePoints();
 
   if (!tripId) return <Navigate to="/" />;
 
@@ -179,6 +180,7 @@ const SharedTripViewWithParams = () => {
       <PurchasePointsModal
         isOpen={isPurchaseModalOpen}
         onClose={closePurchaseModal}
+        initialTab={initialTab}
       />
     </>
   );

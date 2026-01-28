@@ -7,47 +7,21 @@ import { useTranslation } from 'react-i18next';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    initialTab?: 'points' | 'membership';
 }
 
-const PaymentMethodCard = ({
-    icon: Icon,
-    title,
-    selected,
-    onClick
-}: {
-    icon: any,
-    title: string,
-    selected: boolean,
-    onClick: () => void
-}) => (
-    <div
-        onClick={onClick}
-        className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selected
-            ? 'bg-blue-50 border-blue-500 shadow-sm'
-            : 'bg-white border-gray-200 hover:border-blue-200 hover:bg-gray-50'
-            }`}
-    >
-        <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${selected ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
-            <Icon className="w-5 h-5" />
-        </div>
-        <span className={`text-sm font-bold ${selected ? 'text-blue-900' : 'text-gray-600'}`}>
-            {title}
-        </span>
-        {selected && (
-            <div className="absolute top-3 right-3 text-blue-500">
-                <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Check className="w-3 h-3 text-white" />
-                </div>
-            </div>
-        )}
-    </div>
-);
-
-export default function PurchasePointsModal({ isOpen, onClose }: Props) {
+export default function PurchasePointsModal({ isOpen, onClose, initialTab = 'points' }: Props) {
     const { t } = useTranslation();
     const { purchasePoints, isLoading, packages } = usePoints();
     const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'points' | 'membership'>('points');
+    const [activeTab, setActiveTab] = useState<'points' | 'membership'>(initialTab);
+
+    // Sync activeTab with initialTab when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            setActiveTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
 
     // Filter packages by type
     const pointPackages = packages.filter(p => p.type !== 'subscription');

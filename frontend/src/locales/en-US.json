@@ -158,31 +158,6 @@
             "uploading": "Uploading..."
         }
     },
-    "pro_promo": {
-        "title": "Unlock the Full Travel Experience",
-        "desc": "Upgrade to PRO and enjoy unlimited intelligent travel planning services",
-        "subtitle": "Exclusive privileges to make your travel easier",
-        "benefits": {
-            "export": {
-                "title": "Import/Export Backup",
-                "desc": "Securely backup your hard work and access it anytime"
-            },
-            "ai": {
-                "title": "Unlimited Trip Generation",
-                "desc": "No point deduction, generate your exclusive trips for free unlimited times"
-            },
-            "sync": {
-                "title": "Auto Cloud Backup",
-                "desc": "Private and safe automatic sync, never lose your data"
-            },
-            "support": {
-                "title": "AI Travel Consultant",
-                "desc": "Exclusive intelligent consultant, answering your travel questions anytime"
-            }
-        },
-        "upgrade_btn": "Upgrade Now",
-        "cancel_btn": "Maybe Later"
-    },
     "timeline": {
         "select_day": "Select a day to view details",
         "day_label": "DAY {{day}}",

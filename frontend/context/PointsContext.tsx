@@ -34,7 +34,8 @@ interface PointsContextType {
     spendPoints: (amount: number, description: string) => Promise<boolean>;
     isLoading: boolean;
     isPurchaseModalOpen: boolean;
-    openPurchaseModal: () => void;
+    openPurchaseModal: (initialTab?: 'points' | 'membership') => void;
+    initialTab: 'points' | 'membership';
 
     closePurchaseModal: () => void;
     packages: PointPackage[]; // Added
@@ -52,8 +53,12 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isSubscribed, setIsSubscribed] = useState(false); // Added
     const [isLoading, setIsLoading] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+    const [initialTab, setInitialTab] = useState<'points' | 'membership'>('points');
 
-    const openPurchaseModal = () => setIsPurchaseModalOpen(true);
+    const openPurchaseModal = (tab: 'points' | 'membership' = 'points') => {
+        setInitialTab(tab);
+        setIsPurchaseModalOpen(true);
+    };
     const closePurchaseModal = () => setIsPurchaseModalOpen(false);
 
     // Fetch user profile on mount or user change
@@ -191,6 +196,7 @@ export const PointsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isLoading,
             isPurchaseModalOpen,
             openPurchaseModal,
+            initialTab,
             closePurchaseModal,
             packages, // Added
             config: pointConfig // Added

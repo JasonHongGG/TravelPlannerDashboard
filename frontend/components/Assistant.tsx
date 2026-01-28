@@ -187,7 +187,7 @@ export default function Assistant({ onUpdate, isGenerating: parentIsGenerating =
             {t('assistant.locked_desc')}
           </p>
           <button
-            onClick={openPurchaseModal}
+            onClick={() => openPurchaseModal('membership')}
             className="w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-200 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles className="w-5 h-5" />

@@ -409,7 +409,12 @@ export default function SharedTripView({ tripId, onBack }: SharedTripViewProps) 
 
                         {activeTab === 'advisory' && (
                             <div className={`p-6 ${centeredContentClass}`}>
-                                <AdvisoryView trip={trip} />
+                                <AdvisoryView
+                                    trip={trip}
+                                    loading={false}
+                                    error={null}
+                                    onGenerate={() => { }}
+                                />
                             </div>
                         )}
                     </div>

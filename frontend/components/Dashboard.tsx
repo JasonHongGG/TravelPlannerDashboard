@@ -9,7 +9,6 @@ import { getTripCover } from '../utils/tripUtils';
 import TripCard from './dashboard/TripCard';
 import { usePoints } from '../context/PointsContext';
 import { tripShareService } from '../services/TripShareService';
-import ProFeaturePromoModal from './ProFeaturePromoModal';
 import ExportTripModal from './ExportTripModal';
 
 interface Props {
@@ -30,7 +29,6 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t, i18n } = useTranslation();
   const { isSubscribed, openPurchaseModal } = usePoints();
-  const [isPromoModalOpen, setIsPromoModalOpen] = React.useState(false);
   const [exportModalState, setExportModalState] = React.useState<{ isOpen: boolean, trip: Trip | null }>({ isOpen: false, trip: null });
   const [importError, setImportError] = React.useState<string | null>(null);
 
@@ -61,7 +59,7 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
       // Note: We still keep frontend check for UX, but now we also call backend
       if (!isSubscribed) {
         setExportModalState({ isOpen: false, trip: null });
-        setIsPromoModalOpen(true);
+        openPurchaseModal('membership');
         return;
       }
 
@@ -83,7 +81,7 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
         console.error("Export failed:", error);
         if (error.message === 'Subscription required') {
           setExportModalState({ isOpen: false, trip: null });
-          setIsPromoModalOpen(true);
+          openPurchaseModal('membership');
         } else {
           alert("匯出失敗，請稍後再試: " + error.message);
         }
@@ -307,16 +305,6 @@ export default function Dashboard({ trips, onNewTrip, onSelectTrip, onDeleteTrip
         tripTitle={exportModalState.trip?.title || ''}
         onExportJson={() => performExport('json')}
         onExportHong={() => performExport('hong')}
-      />
-
-      {/* Pro Feature Promo Modal */}
-      <ProFeaturePromoModal
-        isOpen={isPromoModalOpen}
-        onClose={() => setIsPromoModalOpen(false)}
-        onUpgrade={() => {
-          setIsPromoModalOpen(false);
-          openPurchaseModal();
-        }}
       />
     </div>
   );
