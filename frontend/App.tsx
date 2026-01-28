@@ -12,6 +12,7 @@ import LoginScreen from './components/LoginScreen';
 import LandingPage from './components/LandingPage';
 import PurchasePointsModal from './components/PurchasePointsModal';
 import { usePoints } from './context/PointsContext';
+import { StatusAlertProvider } from './context/StatusAlertContext';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
@@ -118,36 +119,38 @@ const PublicOnlyRoute = ({ children }: { children: React.ReactElement }) => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Intro / Landing Page */}
-        <Route path="/" element={
-          <PublicOnlyRoute>
-            <LandingPageWrapper />
-          </PublicOnlyRoute>
-        } />
+    <StatusAlertProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Intro / Landing Page */}
+          <Route path="/" element={
+            <PublicOnlyRoute>
+              <LandingPageWrapper />
+            </PublicOnlyRoute>
+          } />
 
-        {/* Login Page */}
-        <Route path="/login" element={
-          <PublicOnlyRoute>
-            <LoginScreen />
-          </PublicOnlyRoute>
-        } />
+          {/* Login Page */}
+          <Route path="/login" element={
+            <PublicOnlyRoute>
+              <LoginScreen />
+            </PublicOnlyRoute>
+          } />
 
-        {/* Protected Dashboard */}
-        <Route path="/dashboard/*" element={
-          <ProtectedRoute>
-            <TravelManager />
-          </ProtectedRoute>
-        } />
+          {/* Protected Dashboard */}
+          <Route path="/dashboard/*" element={
+            <ProtectedRoute>
+              <TravelManager />
+            </ProtectedRoute>
+          } />
 
-        {/* Shared Trip View (Public) */}
-        <Route path="/trip/:tripId" element={<SharedTripViewWrapper />} />
+          {/* Shared Trip View (Public) */}
+          <Route path="/trip/:tripId" element={<SharedTripViewWrapper />} />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </StatusAlertProvider>
   );
 }
 
